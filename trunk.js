@@ -140,3 +140,26 @@
 
 // 	bot.launch();
 // })();
+
+// Загрузка на яндекс диск
+// try {
+//     const response = await axios.get("https://cloud-api.yandex.net/v1/disk/resources/upload", {
+//         params: {
+//             path: "disk:/temp/14.12.2020 00 26.mp3",
+//             overwrite: "true"
+//         },
+//         headers: {
+//             "Authorization": "OAuth TOKEN"
+//         }
+//     });
+
+//     console.log(response.data);
+
+//     const putResponse = await axios.put(response.data.href, fs.createReadStream("./temp/14.12.2020 00 26.mp3"));
+
+//     console.log(putResponse.status);
+// } catch (error) {
+//     console.error(error);
+
+//     return;
+// }
