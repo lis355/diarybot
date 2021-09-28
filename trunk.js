@@ -121,26 +121,6 @@
 // 		]
 // 	});
 
-// 	const bot = new Telegraf( TOKEN );
-
-// 	bot.on("message", async ctx => {
-// 		if (ctx.message.voice) {
-// 			const link = await ctx.telegram.getFileLink(ctx.message.voice["file_id"]);
-
-// 			const fileName = app.moment().format("DD.MM.YYYY HH mm");
-// 			const filePath = app.path.join(process.cwd(), `out/${fileName}.oga`);
-
-// 			await downloadFile({ url: link, filePath });
-
-// 			await executeShellCommand({ cmd: `"C:/Program Files/ffmpeg/bin/ffmpeg" -i "${filePath}" -ac 1 "${app.path.join(process.cwd(), `out/${fileName}.mp3`)}"` });
-
-// 			ctx.reply(filePath);
-// 		}
-// 	});
-
-// 	bot.launch();
-// })();
-
 // Загрузка на яндекс диск
 // try {
 //     const response = await axios.get("https://cloud-api.yandex.net/v1/disk/resources/upload", {

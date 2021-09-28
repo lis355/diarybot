@@ -1,9 +1,15 @@
-const fs = require("fs");
+const ndapp = require("ndapp");
 
-const axios = require("axios");
+const Diary = require("./components/Diary");
+const TelegramBot = require("./components/TelegramBot");
 
-const config = require("./config.json");
-
-(async () => {
-	console.log("Hi");
-})();
+ndapp({
+	config: true,
+	libs: {
+		axios: require("axios")
+	},
+	components: [
+		new Diary(),
+		new TelegramBot()
+	]
+});

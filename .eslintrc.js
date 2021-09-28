@@ -1,3 +1,7 @@
 module.exports = {
-	extends: "protop"
+	extends: "protop",
+	globals: {
+		"ndapp": "writable",
+		"app": "writable"
+	}
 };
