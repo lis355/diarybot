@@ -1,14 +1,17 @@
-module.exports = async function downloadFile({ url, filePath }) {
+module.exports = async function downloadFile({ axiosInstance, url, filePath }) {
 	return new Promise(async (resolve, reject) => {
-		app.fs.ensureDirSync(app.path.dirname(filePath));
+		axiosInstance = axiosInstance || app.libs.axios;
 
-		const response = await app.libs.axios.get(url, {
+		const response = await axiosInstance.get(url, {
 			responseType: "stream"
 		});
 
-		response.data.pipe(app.fs.createWriteStream(filePath));
+		app.fs.ensureDirSync(app.path.dirname(filePath));
 
-		response.data.on("end", resolve);
+		const stream = app.fs.createWriteStream(filePath);
+		stream.on("finish", resolve);
+
+		response.data.pipe(stream);
 		response.data.on("error", reject);
 	});
 };

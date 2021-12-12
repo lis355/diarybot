@@ -17,25 +17,19 @@ function getMonthName(month) {
 
 module.exports = class Diary extends ndapp.ApplicationComponent {
 	getDiaryDirectoryForTime(time) {
-		return app.path.join(app.config.diaryFolder, time.year().toString(), `${app.libs._.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`);
+		return app.path.posix.join(process.env.YANDEXDISK_DIARY_FOLDER, time.year().toString(), `${app.libs._.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, app.libs._.padStart(time.date(), 2, "0"));
 	}
 
-	addTextRecord(text) {
-		const time = app.time;
+	async addTextRecord(text) {
+		await app.yandexDisk.addTextRecord(text);
+	}
 
-		const directory = this.getDiaryDirectoryForTime(time);
-		app.fs.ensureDirSync(directory);
+	async addVoiceRecord(audioFilePath, text) {
+		let yandexDiskAudioFilePath = await app.yandexDisk.addVoiceRecord(audioFilePath, text);
+		yandexDiskAudioFilePath = yandexDiskAudioFilePath.replace(process.env.YANDEXDISK_DIARY_FOLDER, "");
 
-		const path = app.path.join(directory, `${app.libs._.padStart(time.date().toString(), 2, "0")}.txt`);
+		await app.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath.replace(process.env.YANDEXDISK_DIARY_FOLDER, "")}${app.os.EOL}${app.os.EOL}${text}`);
 
-		let record = `${time.format("HH:mm")}${app.os.EOL}${text}${app.os.EOL}${app.os.EOL}`;
-
-		if (app.fs.existsSync(path)) {
-			record = app.fs.readFileSync(path) + record;
-		}
-
-		app.fs.writeFileSync(path, record);
-
-		app.log.info(text);
+		return yandexDiskAudioFilePath;
 	}
 };

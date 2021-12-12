@@ -1,13 +1,14 @@
 const { Telegraf } = require("telegraf");
 
+const getTempFilePath = require("../tools/getTempFilePath");
 const downloadFile = require("../tools/downloadFile");
-const executeShellCommand = require("../tools/executeShellCommand");
+const convertAudioFile = require("../tools/convertAudioFile");
 
 module.exports = class TelegramBot extends ndapp.ApplicationComponent {
 	async initialize() {
 		await super.initialize();
 
-		const bot = new Telegraf(app.config.telegramToken);
+		const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 
 		bot.on("message", async ctx => {
 			if (ctx.message.text) {
@@ -21,7 +22,7 @@ module.exports = class TelegramBot extends ndapp.ApplicationComponent {
 	}
 
 	async processTextMessage(ctx) {
-		app.diary.addTextRecord(ctx.message.text);
+		await app.diary.addTextRecord(ctx.message.text);
 
 		ctx.reply("Заметка добавлена");
 	}
@@ -29,24 +30,22 @@ module.exports = class TelegramBot extends ndapp.ApplicationComponent {
 	async processVoiceMessage(ctx) {
 		const link = await ctx.telegram.getFileLink(ctx.message.voice["file_id"]);
 
-		const time = app.time;
-		const audioFilePath = app.path.resolve(process.cwd(), app.path.join("temp", `${time.valueOf()}.oga`));
+		const audioFilePath = getTempFilePath("oga");
 
 		await downloadFile({ url: link.href, filePath: audioFilePath });
 
-		const directory = app.path.join(app.diary.getDiaryDirectoryForTime(app.time), "voice");
-		app.fs.ensureDirSync(directory);
+		const mp3FilePath = getTempFilePath("mp3");
 
-		const mp3FileName = time.format("HH mm");
-		const mp3FileNameWithExtension = `${mp3FileName}.mp3`;
-		const mp3FilePath = app.path.join(directory, mp3FileNameWithExtension);
-
-		await executeShellCommand({ cmd: `"${app.config.ffmpegPath}" -i "${audioFilePath}" -ac 1 "${mp3FilePath}"` });
+		await convertAudioFile(audioFilePath, mp3FilePath);
 
 		app.fs.removeSync(audioFilePath);
 
-		app.diary.addTextRecord(mp3FileNameWithExtension);
+		const text = await app.googleSpeech.audioMp3ToText(mp3FilePath);
 
-		ctx.reply("Аудиозаметка добавлена");
+		const yandexDiskAudioFilePath = await app.diary.addVoiceRecord(mp3FilePath, text);
+
+		app.fs.removeSync(mp3FilePath);
+
+		ctx.reply(`Аудиозаметка добавлена${app.os.EOL}${yandexDiskAudioFilePath}${app.os.EOL}${app.os.EOL}${text}`);
 	}
 };
