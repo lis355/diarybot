@@ -34,16 +34,18 @@ module.exports = class YandexDisk extends ndapp.ApplicationComponent {
 		app.log.info(text);
 	}
 
-	async addVoiceRecord(audioFilePath, text) {
+	async addVoiceRecord(audioFilePath) {
 		const directory = app.diary.getDiaryDirectoryForTime(app.time);
-		const yandexDiskFilePath = app.path.posix.join(directory, "voice", `${app.time.format("HH mm")}.mp3`);
+		const yandexDiskFilePath = app.path.posix.join(directory, "voice", `${app.time.format("HH mm")}${app.path.extname(audioFilePath)}`);
 
 		await this.uploadFile(yandexDiskFilePath, audioFilePath);
 
-		return yandexDiskFilePath;
+		return yandexDiskFilePath.replace(process.env.YANDEXDISK_DIARY_FOLDER, "");
 	}
 
 	async downloadTextFile(yandexDiskFilePath, filePath) {
+		app.log.info(`Скачивание файла с Яндекс Диска ${yandexDiskFilePath} в ${filePath}`);
+
 		const fileInfoResponse = await this.infoRequest(yandexDiskFilePath);
 		if (fileInfoResponse.path) {
 			await downloadFile({ url: fileInfoResponse.file, filePath });
@@ -53,6 +55,8 @@ module.exports = class YandexDisk extends ndapp.ApplicationComponent {
 	}
 
 	async uploadFile(yandexDiskFilePath, filePath) {
+		app.log.info(`Загрузка файла на Яндекс Диск ${yandexDiskFilePath}`);
+
 		const yandexDiskDirectory = app.path.dirname(yandexDiskFilePath);
 		const directoryInfoResponse = await this.infoRequest(yandexDiskDirectory);
 		if (!directoryInfoResponse.path) {

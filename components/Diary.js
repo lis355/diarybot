@@ -25,10 +25,9 @@ module.exports = class Diary extends ndapp.ApplicationComponent {
 	}
 
 	async addVoiceRecord(audioFilePath, text) {
-		let yandexDiskAudioFilePath = await app.yandexDisk.addVoiceRecord(audioFilePath, text);
-		yandexDiskAudioFilePath = yandexDiskAudioFilePath.replace(process.env.YANDEXDISK_DIARY_FOLDER, "");
+		const yandexDiskAudioFilePath = await app.yandexDisk.addVoiceRecord(audioFilePath);
 
-		await app.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath.replace(process.env.YANDEXDISK_DIARY_FOLDER, "")}${app.os.EOL}${app.os.EOL}${text}`);
+		await app.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath}${app.os.EOL}${app.os.EOL}${text}`);
 
 		return yandexDiskAudioFilePath;
 	}
