@@ -29,11 +29,12 @@ module.exports = class TelegramBot extends ndapp.ApplicationComponent {
 
 	async processVoiceMessage(ctx) {
 		const link = await ctx.telegram.getFileLink(ctx.message.voice["file_id"]);
+		const url = link.href;
 
-		const audioFilePath = getTempFilePath(app.path.extname(link));
+		const audioFilePath = getTempFilePath(app.path.extname(url));
 
-		app.log.info(`Скачивание аудиосообщения ${link.href} в ${audioFilePath}`);
-		await downloadFile({ url: link.href, filePath: audioFilePath });
+		app.log.info(`Скачивание аудиосообщения ${url} в ${audioFilePath}`);
+		await downloadFile({ url, filePath: audioFilePath });
 
 		const text = await app.googleSpeech.audioOggToText(audioFilePath);
 
