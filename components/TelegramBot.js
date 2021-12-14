@@ -1,12 +1,18 @@
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
+
 const { Telegraf } = require("telegraf");
 
 const getTempFilePath = require("../tools/getTempFilePath");
 const downloadFile = require("../tools/downloadFile");
 
-module.exports = class TelegramBot extends ndapp.ApplicationComponent {
-	async initialize() {
-		await super.initialize();
+module.exports = class TelegramBot {
+	constructor(application) {
+		this.application = application;
+	}
 
+	async initialize() {
 		const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 
 		bot.on("message", async ctx => {
@@ -21,9 +27,9 @@ module.exports = class TelegramBot extends ndapp.ApplicationComponent {
 	}
 
 	async processTextMessage(ctx) {
-		await app.diary.addTextRecord(ctx.message.text);
+		await this.application.diary.addTextRecord(ctx.message.text);
 
-		app.log.info("Текстовая заметка добавлена");
+		console.log("Текстовая заметка добавлена");
 		ctx.reply("Заметка добавлена");
 	}
 
@@ -31,19 +37,19 @@ module.exports = class TelegramBot extends ndapp.ApplicationComponent {
 		const link = await ctx.telegram.getFileLink(ctx.message.voice["file_id"]);
 		const url = link.href;
 
-		const audioFilePath = getTempFilePath(app.path.extname(url));
+		const audioFilePath = getTempFilePath(path.extname(url));
 
-		app.log.info(`Скачивание аудиосообщения ${url} в ${audioFilePath}`);
+		console.log(`Скачивание аудиосообщения ${url} в ${audioFilePath}`);
 		await downloadFile({ url, filePath: audioFilePath });
 
-		const text = await app.googleSpeech.audioOggToText(audioFilePath);
+		const text = await this.application.googleSpeech.audioOggToText(audioFilePath);
 
-		const yandexDiskAudioFilePath = await app.diary.addVoiceRecord(audioFilePath, text);
+		const yandexDiskAudioFilePath = await this.application.diary.addVoiceRecord(audioFilePath, text);
 
-		app.log.info(`Удаление временного файла ${audioFilePath}`);
-		app.fs.removeSync(audioFilePath);
+		console.log(`Удаление временного файла ${audioFilePath}`);
+		fs.removeSync(audioFilePath);
 
-		app.log.info("Аудиозаметка добавлена");
-		ctx.reply(`Аудиозаметка добавлена${app.os.EOL}${yandexDiskAudioFilePath}${app.os.EOL}${app.os.EOL}${text}`);
+		console.log("Аудиозаметка добавлена");
+		ctx.reply(`Аудиозаметка добавлена${os.EOL}${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
 	}
 };

@@ -1,3 +1,8 @@
+const path = require("path");
+const os = require("os");
+
+const _ = require("lodash");
+
 function getMonthName(month) {
 	switch (month) {
 		case 1: return "Январь";
@@ -15,19 +20,26 @@ function getMonthName(month) {
 	}
 }
 
-module.exports = class Diary extends ndapp.ApplicationComponent {
+module.exports = class Diary {
+	constructor(application) {
+		this.application = application;
+	}
+
+	async initialize() {
+	}
+
 	getDiaryDirectoryForTime(time) {
-		return app.path.posix.join(process.env.YANDEXDISK_DIARY_FOLDER, time.year().toString(), `${app.libs._.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, app.libs._.padStart(time.date(), 2, "0"));
+		return path.posix.join(process.env.YANDEXDISK_DIARY_FOLDER, time.year().toString(), `${_.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, _.padStart(time.date(), 2, "0"));
 	}
 
 	async addTextRecord(text) {
-		await app.yandexDisk.addTextRecord(text);
+		await this.application.yandexDisk.addTextRecord(text);
 	}
 
 	async addVoiceRecord(audioFilePath, text) {
-		const yandexDiskAudioFilePath = await app.yandexDisk.addVoiceRecord(audioFilePath);
+		const yandexDiskAudioFilePath = await this.application.yandexDisk.addVoiceRecord(audioFilePath);
 
-		await app.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath}${app.os.EOL}${app.os.EOL}${text}`);
+		await this.application.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
 
 		return yandexDiskAudioFilePath;
 	}

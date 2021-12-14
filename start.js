@@ -1,44 +1,13 @@
 require("dotenv-flow").config();
 
-const ndapp = require("ndapp");
+const Application = require("./Application");
 
-const Diary = require("./components/Diary");
-const TelegramBot = require("./components/TelegramBot");
-const GoogleSpeech = require("./components/GoogleSpeech");
-const YandexDisk = require("./components/YandexDisk");
+const errorHandler = function (error) {
+	console.error(error.message);
+};
 
-class AppManager extends ndapp.Application {
-	constructor() {
-		super();
+process.on("uncaughtException", errorHandler);
+process.on("unhandledRejection", errorHandler);
 
-		const errorHandler = error => {
-			if (error.response) {
-				app.log.error(app.tools.json.format(error.response.data));
-			} else {
-				console.error(error.message);
-			}
-		};
-
-		this.onUncaughtException = errorHandler;
-		this.onUnhandledRejection = errorHandler;
-	}
-
-	async run() {
-		await super.run();
-	}
-}
-
-ndapp({
-	app: new AppManager(),
-	config: false,
-	log: false,
-	libs: {
-		axios: require("axios")
-	},
-	components: [
-		new Diary(),
-		new TelegramBot(),
-		new GoogleSpeech(),
-		new YandexDisk()
-	]
-});
+const application = new Application();
+application.initialize();

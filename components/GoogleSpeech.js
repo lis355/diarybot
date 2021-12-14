@@ -1,28 +1,33 @@
+const path = require("path");
+const os = require("os");
+
 const { Storage } = require("@google-cloud/storage");
 const speech = require("@google-cloud/speech");
 
-module.exports = class GoogleSpeech extends ndapp.ApplicationComponent {
-	async initialize() {
-		await super.initialize();
+module.exports = class GoogleSpeech {
+	constructor(application) {
+		this.application = application;
+	}
 
+	async initialize() {
 		this.storage = new Storage();
 		this.speechClient = new speech.SpeechClient();
 	}
 
 	async audioOggToText(audioFilePath) {
-		const bucketAudioFilePath = app.path.basename(audioFilePath);
+		const bucketAudioFilePath = path.basename(audioFilePath);
 		const bucket = this.storage.bucket(process.env.GOOGLE_STORAGE_BUCKET_NAME);
 
-		app.log.info(`Загрузка аудио на Google Storage в ${bucketAudioFilePath}`);
+		console.log(`Загрузка аудио на Google Storage в ${bucketAudioFilePath}`);
 		await bucket.upload(audioFilePath, {
 			destination: bucketAudioFilePath
 		});
 
-		const storageWavAudioFilePath = "gs://" + app.path.posix.join(process.env.GOOGLE_STORAGE_BUCKET_NAME, bucketAudioFilePath);
+		const storageWavAudioFilePath = "gs://" + path.posix.join(process.env.GOOGLE_STORAGE_BUCKET_NAME, bucketAudioFilePath);
 		const request = {
 			audio: {
 				uri: storageWavAudioFilePath
-				// content: app.fs.readFileSync(wavAudioFilePath).toString("base64")
+				// content: fs.readFileSync(wavAudioFilePath).toString("base64")
 			},
 			config: {
 				encoding: "OGG_OPUS",
@@ -36,14 +41,14 @@ module.exports = class GoogleSpeech extends ndapp.ApplicationComponent {
 			}
 		};
 
-		app.log.info("Отправка запроса на декодирование аудио в Google Speech");
+		console.log("Отправка запроса на декодирование аудио в Google Speech");
 		const [operation] = await this.speechClient.longRunningRecognize(request);
 		const [response] = await operation.promise();
-		app.log.info("Успешно");
+		console.log("Успешно");
 
-		const transcription = response.results.map(result => result.alternatives[0].transcript.trim()).join(app.os.EOL);
+		const transcription = response.results.map(result => result.alternatives[0].transcript.trim()).join(os.EOL);
 
-		app.log.info(`Удаление временного файла аудио из Google Storage ${bucketAudioFilePath}`);
+		console.log(`Удаление временного файла аудио из Google Storage ${bucketAudioFilePath}`);
 		await bucket.file(bucketAudioFilePath).delete();
 
 		return transcription;

@@ -1,14 +1,19 @@
+const path = require("path");
+const fs = require("fs");
+
+const axios = require("axios");
+
 module.exports = async function downloadFile({ axiosInstance, url, filePath }) {
 	return new Promise(async (resolve, reject) => {
-		axiosInstance = axiosInstance || app.libs.axios;
+		axiosInstance = axiosInstance || axios;
 
 		const response = await axiosInstance.get(url, {
 			responseType: "stream"
 		});
 
-		app.fs.ensureDirSync(app.path.dirname(filePath));
+		fs.ensureDirSync(path.dirname(filePath));
 
-		const stream = app.fs.createWriteStream(filePath);
+		const stream = fs.createWriteStream(filePath);
 		stream.on("finish", resolve);
 
 		response.data.pipe(stream);
