@@ -6,10 +6,10 @@ const YandexDisk = require("./components/YandexDisk");
 module.exports = class Application {
 	constructor() {
 		this.components = [
-			new Diary(this),
-			new TelegramBot(this),
-			new GoogleSpeech(this),
-			new YandexDisk(this)
+			this.diary = new Diary(this),
+			this.telegramBot = new TelegramBot(this),
+			this.googleSpeech = new GoogleSpeech(this),
+			this.yandexDisk = new YandexDisk(this)
 		];
 	}
 
