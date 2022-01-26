@@ -20,6 +20,8 @@ module.exports = class YandexDisk {
 				"authorization": "OAuth " + process.env.YANDEXDISK_OAUTH_TOKEN
 			}
 		});
+
+		await this.uploadFile("/Stuff/Дневник/2022/01 Январь/26/notes.txt", "C:/Programming/diarybot/temp/1643197082753.data");
 	}
 
 	async addTextRecord(text) {
@@ -64,16 +66,12 @@ module.exports = class YandexDisk {
 	}
 
 	async uploadFile(yandexDiskFilePath, filePath) {
-		console.log(`Загрузка файла на Яндекс Диск ${yandexDiskFilePath}`);
+		console.log(`Загрузка файла на Яндекс Диск ${yandexDiskFilePath} из ${filePath}`);
 
 		const yandexDiskDirectory = path.dirname(yandexDiskFilePath);
 		const directoryInfoResponse = await this.infoRequest(yandexDiskDirectory);
 		if (!directoryInfoResponse.path) {
-			await this.application.yandexDisk.request.put("resources", null, {
-				params: {
-					path: yandexDiskDirectory
-				}
-			});
+			await this.createSubFolder(yandexDiskDirectory);
 		}
 
 		const uploadResponse = await this.application.yandexDisk.request.get("resources/upload", {
@@ -84,6 +82,28 @@ module.exports = class YandexDisk {
 		});
 
 		await this.application.yandexDisk.request.put(uploadResponse.data.href, fs.createReadStream(filePath));
+	}
+
+	async createSubFolder(yandexDiskDirectory) {
+		const subFoldersToCreate = [];
+
+		do {
+			const directoryInfoResponse = await this.infoRequest(yandexDiskDirectory);
+			if (directoryInfoResponse.path) break;
+
+			subFoldersToCreate.push(yandexDiskDirectory);
+			yandexDiskDirectory = path.dirname(yandexDiskDirectory);
+		} while (yandexDiskDirectory !== "/");
+
+		subFoldersToCreate.reverse();
+
+		for (const folder of subFoldersToCreate) {
+			await this.application.yandexDisk.request.put("resources", null, {
+				params: {
+					path: folder
+				}
+			});
+		}
 	}
 
 	async infoRequest(path) {
