@@ -23,6 +23,12 @@ module.exports = class TelegramBot {
 			}
 		});
 
+		bot.catch((error, ctx) => {
+			console.error(JSON.stringify(error, null, "\t"));
+
+			ctx.reply("Ошибка при добавлении заметки");
+		});
+
 		bot.launch();
 	}
 
