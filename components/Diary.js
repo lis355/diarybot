@@ -29,7 +29,7 @@ module.exports = class Diary {
 	}
 
 	getDiaryDirectoryForTime(time) {
-		return path.posix.join(process.env.YANDEXDISK_DIARY_FOLDER, time.year().toString(), `${_.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, _.padStart(time.date(), 2, "0"));
+		return path.posix.join(process.env.YANDEX_DISK_DIARY_FOLDER, time.year().toString(), `${_.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, _.padStart(time.date(), 2, "0"));
 	}
 
 	async addTextRecord(text) {

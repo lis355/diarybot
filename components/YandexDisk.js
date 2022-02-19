@@ -17,11 +17,9 @@ module.exports = class YandexDisk {
 		this.request = axios.create({
 			baseURL: "https://cloud-api.yandex.net/v1/disk/",
 			headers: {
-				"authorization": "OAuth " + process.env.YANDEXDISK_OAUTH_TOKEN
+				"authorization": "OAuth " + process.env.YANDEX_DISK_OAUTH_TOKEN
 			}
 		});
-
-		await this.uploadFile("/Stuff/Дневник/2022/01 Январь/26/notes.txt", "C:/Programming/diarybot/temp/1643197082753.data");
 	}
 
 	async addTextRecord(text) {
@@ -51,7 +49,7 @@ module.exports = class YandexDisk {
 
 		await this.uploadFile(yandexDiskFilePath, audioFilePath);
 
-		return yandexDiskFilePath.replace(process.env.YANDEXDISK_DIARY_FOLDER, "");
+		return yandexDiskFilePath.replace(process.env.YANDEX_DISK_DIARY_FOLDER, "");
 	}
 
 	async downloadTextFile(yandexDiskFilePath, filePath) {
@@ -74,14 +72,14 @@ module.exports = class YandexDisk {
 			await this.createSubFolder(yandexDiskDirectory);
 		}
 
-		const uploadResponse = await this.application.yandexDisk.request.get("resources/upload", {
+		const uploadResponse = await this.request.get("resources/upload", {
 			params: {
 				path: yandexDiskFilePath,
 				overwrite: "true"
 			}
 		});
 
-		await this.application.yandexDisk.request.put(uploadResponse.data.href, fs.createReadStream(filePath));
+		await this.request.put(uploadResponse.data.href, fs.createReadStream(filePath));
 	}
 
 	async createSubFolder(yandexDiskDirectory) {
@@ -98,7 +96,7 @@ module.exports = class YandexDisk {
 		subFoldersToCreate.reverse();
 
 		for (const folder of subFoldersToCreate) {
-			await this.application.yandexDisk.request.put("resources", null, {
+			await this.request.put("resources", null, {
 				params: {
 					path: folder
 				}
@@ -108,7 +106,7 @@ module.exports = class YandexDisk {
 
 	async infoRequest(path) {
 		try {
-			const response = await this.application.yandexDisk.request.get("resources", {
+			const response = await this.request.get("resources", {
 				params: {
 					path
 				}

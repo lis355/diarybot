@@ -1,6 +1,6 @@
 const Diary = require("./components/Diary");
 const TelegramBot = require("./components/TelegramBot");
-const GoogleSpeech = require("./components/GoogleSpeech");
+const YandexSpeech = require("./components/YandexSpeech");
 const YandexDisk = require("./components/YandexDisk");
 
 module.exports = class Application {
@@ -8,7 +8,7 @@ module.exports = class Application {
 		this.components = [
 			this.diary = new Diary(this),
 			this.telegramBot = new TelegramBot(this),
-			this.googleSpeech = new GoogleSpeech(this),
+			this.yandexSpeech = new YandexSpeech(this),
 			this.yandexDisk = new YandexDisk(this)
 		];
 	}

@@ -48,7 +48,7 @@ module.exports = class TelegramBot {
 		console.log(`Скачивание аудиосообщения ${url} в ${audioFilePath}`);
 		await downloadFile({ url, filePath: audioFilePath });
 
-		const text = await this.application.googleSpeech.audioOggToText(audioFilePath);
+		const text = await this.application.yandexSpeech.audioOggToText(audioFilePath);
 
 		const yandexDiskAudioFilePath = await this.application.diary.addVoiceRecord(audioFilePath, text);
 
