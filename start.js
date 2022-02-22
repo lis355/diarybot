@@ -3,6 +3,7 @@ require("dotenv-flow").config();
 const Application = require("./Application");
 
 const errorHandler = function (error) {
+	console.error(error.stack);
 	console.error(JSON.stringify(error, null, "\t"));
 };
 

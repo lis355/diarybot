@@ -7,15 +7,17 @@ const { Telegraf } = require("telegraf");
 const getTempFilePath = require("../tools/getTempFilePath");
 const downloadFile = require("../tools/downloadFile");
 
+const MAX_MESSAGE_LENGTH = 4096;
+
 module.exports = class TelegramBot {
 	constructor(application) {
 		this.application = application;
 	}
 
 	async initialize() {
-		const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
+		this.bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 
-		bot.on("message", async ctx => {
+		this.bot.on("message", async ctx => {
 			if (ctx.message.text) {
 				await this.processTextMessage(ctx);
 			} else if (ctx.message.voice) {
@@ -23,13 +25,13 @@ module.exports = class TelegramBot {
 			}
 		});
 
-		bot.catch((error, ctx) => {
+		this.bot.catch((error, ctx) => {
 			console.error(JSON.stringify(error, null, "\t"));
 
 			ctx.reply("Ошибка при добавлении заметки");
 		});
 
-		bot.launch();
+		this.bot.launch();
 	}
 
 	async processTextMessage(ctx) {
@@ -56,6 +58,12 @@ module.exports = class TelegramBot {
 		fs.removeSync(audioFilePath);
 
 		console.log("Аудиозаметка добавлена");
-		ctx.reply(`Аудиозаметка добавлена${os.EOL}${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
+		this.sendLongMessage(ctx.message.from.id, `Аудиозаметка добавлена${os.EOL}${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
+	}
+
+	sendLongMessage(chatId, message) {
+		for (let i = 0; i < message.length; i += MAX_MESSAGE_LENGTH) {
+			this.bot.telegram.sendMessage(chatId, message.substring(i, i + MAX_MESSAGE_LENGTH));
+		}
 	}
 };
