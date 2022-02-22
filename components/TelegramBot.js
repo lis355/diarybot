@@ -58,12 +58,12 @@ module.exports = class TelegramBot {
 		fs.removeSync(audioFilePath);
 
 		console.log("Аудиозаметка добавлена");
-		this.sendLongMessage(ctx.message.from.id, `Аудиозаметка добавлена${os.EOL}${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
+		await this.sendLongMessage(ctx.message.from.id, `Аудиозаметка добавлена${os.EOL}${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
 	}
 
-	sendLongMessage(chatId, message) {
+	async sendLongMessage(chatId, message) {
 		for (let i = 0; i < message.length; i += MAX_MESSAGE_LENGTH) {
-			this.bot.telegram.sendMessage(chatId, message.substring(i, i + MAX_MESSAGE_LENGTH));
+			await this.bot.telegram.sendMessage(chatId, message.substring(i, i + MAX_MESSAGE_LENGTH));
 		}
 	}
 };
