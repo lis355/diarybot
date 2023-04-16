@@ -1,16 +1,11 @@
 const path = require("path");
-const fs = require("fs-extra");
-
 const moment = require("moment");
 
-module.exports = function getTempFilePath(extension) {
+module.exports = function getTempFilePath(extension = "data") {
 	const directory = path.resolve(process.cwd(), "temp");
-	fs.ensureDirSync(directory);
 
-	extension = extension || "data";
-	if (extension.startsWith(".")) {
-		extension = extension.slice(1);
-	}
+	if (extension.startsWith(".")) extension = extension.slice(1);
+	const fileName = moment() + Math.ceil(Math.random() * 1000) + "." + extension;
 
-	return path.join(directory, moment() + Math.ceil(Math.random() * 1000) + "." + extension);
+	return path.join(directory, fileName);
 };

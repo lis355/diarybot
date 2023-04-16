@@ -1,7 +1,7 @@
 const path = require("path");
 
 const axios = require("axios");
-const EasyYandexS3 = require("easy-yandex-s3");
+const EasyYandexS3 = require("easy-yandex-s3").default;
 const urljoin = require("url-join");
 const delay = require("delay");
 

@@ -1,13 +1,13 @@
 const path = require("path");
 const fs = require("fs-extra");
-const os = require("os");
-
+const { EOL } = require("os");
 const { Telegraf } = require("telegraf");
 
 const getTempFilePath = require("../tools/getTempFilePath");
 const downloadFile = require("../tools/downloadFile");
 
 const MAX_MESSAGE_LENGTH = 4096;
+const LOG_MESSAGE_LIFETIME_IN_MILLISECONDS = 10000;
 
 module.exports = class TelegramBot {
 	constructor(application) {
@@ -38,7 +38,9 @@ module.exports = class TelegramBot {
 		await this.application.diary.addTextRecord(ctx.message.text);
 
 		console.log("Текстовая заметка добавлена");
-		ctx.reply("Заметка добавлена");
+
+		const replyMessageInfo = await ctx.reply("Заметка добавлена");
+		setTimeout(() => this.bot.telegram.deleteMessage(replyMessageInfo.chat.id, replyMessageInfo["message_id"]), LOG_MESSAGE_LIFETIME_IN_MILLISECONDS);
 	}
 
 	async processVoiceMessage(ctx) {
@@ -58,12 +60,49 @@ module.exports = class TelegramBot {
 		fs.removeSync(audioFilePath);
 
 		console.log("Аудиозаметка добавлена");
-		await this.sendLongMessage(ctx.message.from.id, `Аудиозаметка добавлена${os.EOL}${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
+		await this.sendLongMessage(ctx.message.from.id, `Аудиозаметка добавлена${EOL}${yandexDiskAudioFilePath}${EOL}${EOL}${text}`);
+	}
+
+	splitMessageToTelegramBlocks(message) {
+		message = this.formatBlockMessage(message);
+
+		const blocks = [];
+
+		if (message.length <= MAX_MESSAGE_LENGTH) {
+			blocks.push(message);
+		} else {
+			let part = "";
+			const lines = message.split(EOL);
+			for (const line of lines) {
+				if (part.length + line.length > MAX_MESSAGE_LENGTH) {
+					blocks.push(part);
+
+					part = "";
+				}
+
+				part += line + EOL;
+			}
+
+			blocks.push(part);
+		}
+
+		return blocks;
+	}
+
+	formatBlockMessage(message) {
+		if (Array.isArray(message)) {
+			let blockMessage = "";
+			message.forEach(line => { blockMessage += line === EOL ? line : line + EOL; });
+
+			return blockMessage;
+		} else {
+			return String(message);
+		}
 	}
 
 	async sendLongMessage(chatId, message) {
-		for (let i = 0; i < message.length; i += MAX_MESSAGE_LENGTH) {
-			await this.bot.telegram.sendMessage(chatId, message.substring(i, i + MAX_MESSAGE_LENGTH));
+		for (const messageBlock of this.splitMessageToTelegramBlocks(message)) {
+			await this.bot.telegram.sendMessage(chatId, messageBlock);
 		}
 	}
 };

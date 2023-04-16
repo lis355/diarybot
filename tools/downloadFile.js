@@ -1,6 +1,5 @@
 const path = require("path");
 const fs = require("fs-extra");
-
 const axios = require("axios");
 
 module.exports = async function downloadFile({ axiosInstance, url, filePath }) {

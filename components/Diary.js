@@ -1,6 +1,5 @@
 const path = require("path");
-const os = require("os");
-
+const { EOL } = require("os");
 const _ = require("lodash");
 
 function getMonthName(month) {
@@ -39,7 +38,7 @@ module.exports = class Diary {
 	async addVoiceRecord(audioFilePath, text) {
 		const yandexDiskAudioFilePath = await this.application.yandexDisk.addVoiceRecord(audioFilePath);
 
-		await this.application.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath}${os.EOL}${os.EOL}${text}`);
+		await this.application.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath}${EOL}${EOL}${text}`);
 
 		return yandexDiskAudioFilePath;
 	}

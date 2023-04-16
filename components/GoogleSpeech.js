@@ -1,5 +1,5 @@
 const path = require("path");
-const os = require("os");
+const { EOL } = require("os");
 
 const { Storage } = require("@google-cloud/storage");
 const speech = require("@google-cloud/speech");
@@ -46,7 +46,7 @@ module.exports = class GoogleSpeech {
 		const [response] = await operation.promise();
 		console.log("Успешно");
 
-		const transcription = response.results.map(result => result.alternatives[0].transcript.trim()).join(os.EOL);
+		const transcription = response.results.map(result => result.alternatives[0].transcript.trim()).join(EOL);
 
 		console.log(`Удаление временного файла аудио из Google Storage ${bucketAudioFilePath}`);
 		await bucket.file(bucketAudioFilePath).delete();

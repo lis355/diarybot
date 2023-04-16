@@ -1,7 +1,6 @@
 const path = require("path");
 const fs = require("fs-extra");
-const os = require("os");
-
+const { EOL } = require("os");
 const axios = require("axios");
 const moment = require("moment");
 
@@ -24,17 +23,13 @@ module.exports = class YandexDisk {
 
 	async addTextRecord(text) {
 		const directory = this.application.diary.getDiaryDirectoryForTime(moment());
-		const yandexDiskFilePath = path.posix.join(directory, "notes.txt");
+		const yandexDiskFilePath = path.posix.join(directory, "notes.md");
 
 		const filePath = getTempFilePath();
 
 		await this.downloadTextFile(yandexDiskFilePath, filePath);
 
-		let record = fs.readFileSync(filePath, { encoding: "utf-8" });
-
-		record += `${moment().format("HH:mm")}${os.EOL}${text}${os.EOL}${os.EOL}`;
-
-		fs.writeFileSync(filePath, record);
+		fs.appendFileSync(filePath, `${moment().format("HH:mm")}${EOL}${text}${EOL}${EOL}`);
 
 		await this.uploadFile(yandexDiskFilePath, filePath);
 
@@ -45,7 +40,7 @@ module.exports = class YandexDisk {
 
 	async addVoiceRecord(audioFilePath) {
 		const directory = this.application.diary.getDiaryDirectoryForTime(moment());
-		const yandexDiskFilePath = path.posix.join(directory, "voice", `${moment().format("HH mm")}${path.extname(audioFilePath)}`);
+		const yandexDiskFilePath = path.posix.join(directory, "voice", `${moment().format("HH mm ss")}${path.extname(audioFilePath)}`);
 
 		await this.uploadFile(yandexDiskFilePath, audioFilePath);
 
