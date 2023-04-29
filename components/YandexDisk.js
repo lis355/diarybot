@@ -1,6 +1,7 @@
 const path = require("path");
-const fs = require("fs-extra");
 const { EOL } = require("os");
+
+const fs = require("fs-extra");
 const axios = require("axios");
 const moment = require("moment");
 
