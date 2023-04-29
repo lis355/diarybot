@@ -1,7 +1,9 @@
 const path = require("path");
 
+const fs = require("fs-extra");
+const awsSdkClient = require("@aws-sdk/client-s3");
+const awsSdkStorage = require("@aws-sdk/lib-storage");
 const axios = require("axios");
-const EasyYandexS3 = require("easy-yandex-s3").default;
 const urljoin = require("url-join");
 const delay = require("delay");
 
@@ -17,22 +19,34 @@ module.exports = class YandexSpeech {
 			}
 		});
 
-		this.s3 = new EasyYandexS3({
-			auth: {
+		this.s3Client = new awsSdkClient.S3Client({
+			credentials: {
 				accessKeyId: process.env.YANDEX_CLOUD_STATIC_KEY_ID,
 				secretAccessKey: process.env.YANDEX_CLOUD_STATIC_KEY_SECRET
 			},
-			Bucket: process.env.YANDEX_OBJECT_STORAGE_BUCKET
+			region: "ru-central1",
+			endpoint: "https://s3.yandexcloud.net"
 		});
 	}
 
 	async audioOggToText(audioFilePath) {
 		console.log(`Загрузка аудио на Yandex Object Storage из ${audioFilePath}`);
-		const uploadResponse = await this.s3.Upload({ path: path.resolve(audioFilePath) }, "/");
+
+		const uploadResponsePromise = new awsSdkStorage.Upload({
+			client: this.s3Client,
+			params: {
+				Bucket: process.env.YANDEX_OBJECT_STORAGE_BUCKET,
+				Key: path.basename(audioFilePath),
+				Body: fs.readFileSync(audioFilePath)
+			}
+		});
+
+		const uploadResponse = await uploadResponsePromise.done();
 
 		const bucketFileKey = uploadResponse.Key;
 
 		console.log("Отправка запроса на декодирование аудио в Yandex Speech Kit");
+
 		const recognizeResponse = await this.request.post("https://transcribe.api.cloud.yandex.net/speech/stt/v2/longRunningRecognize", {
 			config: {
 				specification: {
@@ -46,7 +60,7 @@ module.exports = class YandexSpeech {
 				}
 			},
 			audio: {
-				uri: uploadResponse.Location
+				uri: urljoin(`https://${process.env.YANDEX_OBJECT_STORAGE_BUCKET}.storage.yandexcloud.net`, bucketFileKey)
 			}
 		});
 
@@ -67,7 +81,11 @@ module.exports = class YandexSpeech {
 		console.log("Успешно");
 
 		console.log(`Удаление временного файла аудио из Yandex Object Storage ${bucketFileKey}`);
-		await this.s3.Remove(bucketFileKey);
+
+		await this.s3Client.send(new awsSdkClient.DeleteObjectCommand({
+			Bucket: process.env.YANDEX_OBJECT_STORAGE_BUCKET,
+			Key: bucketFileKey
+		}));
 
 		return transcription;
 	}
