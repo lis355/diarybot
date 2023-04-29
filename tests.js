@@ -1,3 +1,5 @@
+// const path = require("path");
+
 require("dotenv-flow").config();
 
 const errorHandler = function (error) {
@@ -12,7 +14,7 @@ process.on("unhandledRejection", errorHandler);
 	// const YandexSpeech = require("./components/YandexSpeech");
 	// const yandexSpeech = new YandexSpeech(this);
 	// await yandexSpeech.initialize();
-	// await yandexSpeech.audioOggToText("./temp/test.oga");
+	// await yandexSpeech.audioOggToText(path.resolve(process.cwd(), "./temp/test.oga"));
 
 	// const TelegramBot = require("./components/TelegramBot");
 	// const telegramBot = new TelegramBot(this);
