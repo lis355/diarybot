@@ -7,6 +7,8 @@ const axios = require("axios");
 const urljoin = require("url-join");
 const delay = require("delay");
 
+const getTempFilePath = require("../tools/getTempFilePath");
+
 module.exports = class YandexSpeech {
 	constructor(application) {
 		this.application = application;
@@ -29,7 +31,10 @@ module.exports = class YandexSpeech {
 		});
 	}
 
-	async audioOggToText(audioFilePath) {
+	async audioOggToText(voiceBuffer) {
+		const audioFilePath = getTempFilePath(".oga");
+		fs.outputFileSync(audioFilePath, voiceBuffer);
+
 		console.log(`Загрузка аудио на Yandex Object Storage из ${audioFilePath}`);
 
 		const uploadResponsePromise = new awsSdkStorage.Upload({
@@ -68,6 +73,8 @@ module.exports = class YandexSpeech {
 
 		let transcription;
 		while (true) {
+			console.log("Обновление статуса запроса на декодирование аудио в Yandex Speech Kit");
+
 			const response = await this.request.get(urljoin("https://operation.api.cloud.yandex.net/operations/", recognizeOperationId));
 
 			if (response.data.done) {
@@ -86,6 +93,8 @@ module.exports = class YandexSpeech {
 			Bucket: process.env.YANDEX_OBJECT_STORAGE_BUCKET,
 			Key: bucketFileKey
 		}));
+
+		fs.removeSync(audioFilePath);
 
 		return transcription;
 	}

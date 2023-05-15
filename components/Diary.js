@@ -2,6 +2,7 @@ const path = require("path");
 const { EOL } = require("os");
 
 const _ = require("lodash");
+const moment = require("moment");
 
 function getMonthName(month) {
 	switch (month) {
@@ -29,18 +30,47 @@ module.exports = class Diary {
 	}
 
 	getDiaryDirectoryForTime(time) {
-		return path.posix.join(process.env.YANDEX_DISK_DIARY_FOLDER, time.year().toString(), `${_.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, _.padStart(time.date(), 2, "0"));
+		return path.posix.join(time.year().toString(), `${_.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, _.padStart(time.date(), 2, "0"));
+	}
+
+	getDiaryDirectoryForCurrentTime() {
+		return this.getDiaryDirectoryForTime(moment());
 	}
 
 	async addTextRecord(text) {
-		await this.application.yandexDisk.addTextRecord(text);
+		const directory = this.getDiaryDirectoryForCurrentTime();
+		const filePath = path.posix.join(directory, "notes.md");
+
+		let contents = await this.application.yandexDisk.downloadFile(filePath);
+		contents = contents ? contents.toString() : "";
+
+		contents += `${moment().format("HH:mm")}${EOL}${text}${EOL}${EOL}`;
+
+		await this.application.yandexDisk.uploadFile(filePath, contents);
 	}
 
-	async addVoiceRecord(audioFilePath, text) {
-		const yandexDiskAudioFilePath = await this.application.yandexDisk.addVoiceRecord(audioFilePath);
+	async addPhotoRecord(photoBuffer, caption = undefined) {
+		const directory = this.getDiaryDirectoryForCurrentTime();
+		const subFilePath = path.posix.join("photo", `${moment().format("HH mm ss")}.jpg`);
+		const filePath = path.posix.join(directory, subFilePath);
 
-		await this.application.yandexDisk.addTextRecord(`${yandexDiskAudioFilePath}${EOL}${EOL}${text}`);
+		await this.application.yandexDisk.uploadFile(filePath, photoBuffer);
 
-		return yandexDiskAudioFilePath;
+		let text = `![[${subFilePath}|200]]`;
+		if (caption) text += `${EOL}${caption}`;
+
+		await this.addTextRecord(text);
+	}
+
+	async addVoiceRecord(voiceBuffer, text) {
+		const directory = this.getDiaryDirectoryForCurrentTime();
+		const subFilePath = path.posix.join("voice", `${moment().format("HH mm ss")}.oga`);
+		const filePath = path.posix.join(directory, subFilePath);
+
+		await this.application.yandexDisk.uploadFile(filePath, voiceBuffer);
+
+		text = `![[${subFilePath}]]${EOL}${text}`;
+
+		await this.addTextRecord(text);
 	}
 };

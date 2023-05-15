@@ -1,11 +1,7 @@
 const path = require("path");
-const { EOL } = require("os");
 
-const fs = require("fs-extra");
 const axios = require("axios");
-const moment = require("moment");
 
-const getTempFilePath = require("../tools/getTempFilePath");
 const downloadFile = require("../tools/downloadFile");
 
 module.exports = class YandexDisk {
@@ -22,51 +18,29 @@ module.exports = class YandexDisk {
 		});
 	}
 
-	async addTextRecord(text) {
-		const directory = this.application.diary.getDiaryDirectoryForTime(moment());
-		const yandexDiskFilePath = path.posix.join(directory, "notes.md");
-
-		const filePath = getTempFilePath();
-
-		await this.downloadTextFile(yandexDiskFilePath, filePath);
-
-		fs.appendFileSync(filePath, `${moment().format("HH:mm")}${EOL}${text}${EOL}${EOL}`);
-
-		await this.uploadFile(yandexDiskFilePath, filePath);
-
-		fs.removeSync(filePath);
-
-		console.log(text);
+	getDiskFilePath(localPath) {
+		return path.posix.join(process.env.YANDEX_DISK_DIARY_FOLDER, localPath);
 	}
 
-	async addVoiceRecord(audioFilePath) {
-		const directory = this.application.diary.getDiaryDirectoryForTime(moment());
-		const yandexDiskFilePath = path.posix.join(directory, "voice", `${moment().format("HH mm ss")}${path.extname(audioFilePath)}`);
+	async downloadFile(filePath) {
+		const yandexDiskFilePath = this.getDiskFilePath(filePath);
 
-		await this.uploadFile(yandexDiskFilePath, audioFilePath);
-
-		return yandexDiskFilePath.replace(process.env.YANDEX_DISK_DIARY_FOLDER, "");
-	}
-
-	async downloadTextFile(yandexDiskFilePath, filePath) {
-		console.log(`Скачивание файла с Яндекс Диска ${yandexDiskFilePath} в ${filePath}`);
+		console.log(`Скачивание файла с Яндекс Диска ${yandexDiskFilePath}`);
 
 		const fileInfoResponse = await this.infoRequest(yandexDiskFilePath);
-		if (fileInfoResponse.path) {
-			await downloadFile({ url: fileInfoResponse.file, filePath });
-		} else {
-			fs.outputFileSync(filePath, "");
-		}
+		if (fileInfoResponse.path) return downloadFile({ url: fileInfoResponse.file });
+
+		return null;
 	}
 
-	async uploadFile(yandexDiskFilePath, filePath) {
-		console.log(`Загрузка файла на Яндекс Диск ${yandexDiskFilePath} из ${filePath}`);
+	async uploadFile(filePath, data) {
+		const yandexDiskFilePath = this.getDiskFilePath(filePath);
+
+		console.log(`Загрузка файла на Яндекс Диск ${yandexDiskFilePath}`);
 
 		const yandexDiskDirectory = path.dirname(yandexDiskFilePath);
 		const directoryInfoResponse = await this.infoRequest(yandexDiskDirectory);
-		if (!directoryInfoResponse.path) {
-			await this.createSubFolder(yandexDiskDirectory);
-		}
+		if (!directoryInfoResponse.path) await this.createSubFolder(yandexDiskDirectory);
 
 		const uploadResponse = await this.request.get("resources/upload", {
 			params: {
@@ -75,7 +49,7 @@ module.exports = class YandexDisk {
 			}
 		});
 
-		await this.request.put(uploadResponse.data.href, fs.createReadStream(filePath));
+		await this.request.put(uploadResponse.data.href, data);
 	}
 
 	async createSubFolder(yandexDiskDirectory) {

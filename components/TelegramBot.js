@@ -1,10 +1,8 @@
-const path = require("path");
 const { EOL } = require("os");
 
-const fs = require("fs-extra");
 const { Telegraf } = require("telegraf");
+const _ = require("lodash");
 
-const getTempFilePath = require("../tools/getTempFilePath");
 const downloadFile = require("../tools/downloadFile");
 
 const MAX_MESSAGE_LENGTH = 4096;
@@ -19,8 +17,12 @@ module.exports = class TelegramBot {
 		this.bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 
 		this.bot.on("message", async ctx => {
+			console.log(`Сообщение от @${ctx.chat.username} id=${ctx.chat.id}`);
+
 			if (ctx.message.text) {
 				await this.processTextMessage(ctx);
+			} else if (ctx.message.photo) {
+				await this.processPhotoMessage(ctx);
 			} else if (ctx.message.voice) {
 				await this.processVoiceMessage(ctx);
 			}
@@ -33,35 +35,46 @@ module.exports = class TelegramBot {
 		});
 
 		this.bot.launch();
+
+		console.log("Бот начал работу");
 	}
 
 	async processTextMessage(ctx) {
 		await this.application.diary.addTextRecord(ctx.message.text);
 
-		console.log("Текстовая заметка добавлена");
+		await this.sendMessageWithAutodelete(ctx.chat.id, "Текстовая заметка добавлена");
 
-		const replyMessageInfo = await ctx.reply("Заметка добавлена");
-		setTimeout(() => this.bot.telegram.deleteMessage(replyMessageInfo.chat.id, replyMessageInfo["message_id"]), LOG_MESSAGE_LIFETIME_IN_MILLISECONDS);
+		console.log("Текстовая заметка добавлена");
+	}
+
+	async processPhotoMessage(ctx) {
+		const link = await ctx.telegram.getFileLink(_.last(ctx.message.photo)["file_id"]);
+		const url = link.href;
+
+		console.log(`Скачивание фото ${url}`);
+		const photoBuffer = await downloadFile({ url });
+
+		await this.application.diary.addPhotoRecord(photoBuffer, ctx.message.caption);
+
+		await this.sendMessageWithAutodelete(ctx.chat.id, "Фото заметка добавлена");
+
+		console.log("Фото заметка добавлена");
 	}
 
 	async processVoiceMessage(ctx) {
 		const link = await ctx.telegram.getFileLink(ctx.message.voice["file_id"]);
 		const url = link.href;
 
-		const audioFilePath = getTempFilePath(path.extname(url));
+		console.log(`Скачивание аудиосообщения ${url}`);
+		const voiceBuffer = await downloadFile({ url });
 
-		console.log(`Скачивание аудиосообщения ${url} в ${audioFilePath}`);
-		await downloadFile({ url, filePath: audioFilePath });
+		const transcription = await this.application.yandexSpeech.audioOggToText(voiceBuffer);
 
-		const text = await this.application.yandexSpeech.audioOggToText(audioFilePath);
+		await this.application.diary.addVoiceRecord(voiceBuffer, transcription);
 
-		const yandexDiskAudioFilePath = await this.application.diary.addVoiceRecord(audioFilePath, text);
-
-		console.log(`Удаление временного файла ${audioFilePath}`);
-		fs.removeSync(audioFilePath);
+		await this.sendLongMessage(ctx.message.from.id, transcription);
 
 		console.log("Аудиозаметка добавлена");
-		await this.sendLongMessage(ctx.message.from.id, `Аудиозаметка добавлена${EOL}${yandexDiskAudioFilePath}${EOL}${EOL}${text}`);
 	}
 
 	splitMessageToTelegramBlocks(message) {
@@ -105,5 +118,10 @@ module.exports = class TelegramBot {
 		for (const messageBlock of this.splitMessageToTelegramBlocks(message)) {
 			await this.bot.telegram.sendMessage(chatId, messageBlock);
 		}
+	}
+
+	async sendMessageWithAutodelete(chatId, message) {
+		const replyMessageInfo = await this.bot.telegram.sendMessage(chatId, message);
+		setTimeout(() => this.bot.telegram.deleteMessage(chatId, replyMessageInfo["message_id"]), LOG_MESSAGE_LIFETIME_IN_MILLISECONDS);
 	}
 };
