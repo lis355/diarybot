@@ -1,0 +1,9 @@
+diarybot - telegram бот для записей в дневник с сохранением на ЯД
+
+Чтобы получить YANDEX_DISK_OAUTH_TOKEN нужно открыть в браузере 
+https://oauth.yandex.ru/authorize?response_type=token&client_id=CLIENT_ID
+CLIENT_ID нужно указать из созданного приложения на https://oauth.yandex.ru/
+
+Серевер вернет токен со сроком на год
+
+Подробности https://yandex.ru/dev/id/doc/ru/codes/code-and-token
