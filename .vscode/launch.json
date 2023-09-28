@@ -5,26 +5,44 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "start",
 			"type": "node",
 			"request": "launch",
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"name": "start",
 			"program": "${workspaceFolder}/start.js",
-			"cwd": "${workspaceFolder}",
-			"args": []
+			"cwd": "${workspaceFolder}"
 		},
 		{
+			"name": "tests",
 			"type": "node",
 			"request": "launch",
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"name": "tests",
 			"program": "${workspaceFolder}/tests.js",
-			"cwd": "${workspaceFolder}",
-			"args": []
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "service-windows-install",
+			"type": "node",
+			"request": "launch",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"program": "${workspaceFolder}/service/windows/serviceInstall.js",
+			"cwd": "${workspaceFolder}/service/windows/"
+		},
+		{
+			"name": "service-windows-uninstall",
+			"type": "node",
+			"request": "launch",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"program": "${workspaceFolder}/service/windows/serviceUninstall.js",
+			"cwd": "${workspaceFolder}/service/windows/"
 		}
 	]
 }
