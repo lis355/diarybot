@@ -4,10 +4,13 @@ const { Service } = require("node-windows");
 
 const { name } = require("../../package.json");
 
+const workingDirectory = path.resolve("../..");
+
 const svc = new Service({
 	name,
 	description: "",
-	script: path.resolve("../../start.js")
+	script: path.resolve(workingDirectory, "start.js"),
+	workingDirectory
 });
 
 svc.on("install", () => {
