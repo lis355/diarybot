@@ -1,20 +1,16 @@
-const path = require("path");
+import awsSdkClient from "@aws-sdk/client-s3";
+import awsSdkStorage from "@aws-sdk/lib-storage";
+import axios from "axios";
+import delay from "delay";
+import uniqid from "uniqid";
+import urljoin from "url-join";
 
-const fs = require("fs-extra");
-const awsSdkClient = require("@aws-sdk/client-s3");
-const awsSdkStorage = require("@aws-sdk/lib-storage");
-const axios = require("axios");
-const urljoin = require("url-join");
-const delay = require("delay");
+import ApplicationComponent from "../ApplicationComponent.js";
 
-const getTempFilePath = require("../tools/getTempFilePath");
-
-module.exports = class YandexSpeech {
-	constructor(application) {
-		this.application = application;
-	}
-
+export default class YandexSpeech extends ApplicationComponent {
 	async initialize() {
+		await super.initialize();
+
 		this.request = axios.create({
 			headers: {
 				"authorization": "Api-Key " + process.env.YANDEX_CLOUD_API_KEY
@@ -32,17 +28,14 @@ module.exports = class YandexSpeech {
 	}
 
 	async audioOggToText(voiceBuffer) {
-		const audioFilePath = getTempFilePath(".oga");
-		fs.outputFileSync(audioFilePath, voiceBuffer);
-
-		console.log(`Загрузка аудио на Yandex Object Storage из ${audioFilePath}`);
+		console.log("Загрузка аудио на Yandex Object Storage");
 
 		const uploadResponsePromise = new awsSdkStorage.Upload({
 			client: this.s3Client,
 			params: {
 				Bucket: process.env.YANDEX_OBJECT_STORAGE_BUCKET,
-				Key: path.basename(audioFilePath),
-				Body: fs.readFileSync(audioFilePath)
+				Key: `${uniqid()}.oga`,
+				Body: voiceBuffer
 			}
 		});
 
@@ -93,8 +86,6 @@ module.exports = class YandexSpeech {
 			Bucket: process.env.YANDEX_OBJECT_STORAGE_BUCKET,
 			Key: bucketFileKey
 		}));
-
-		fs.removeSync(audioFilePath);
 
 		return transcription;
 	}

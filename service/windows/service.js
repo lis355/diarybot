@@ -1,8 +1,9 @@
-const path = require("node:path");
+import path from "node:path";
 
-const { Service } = require("node-windows");
+import fs from "fs-extra";
+import { Service } from "node-windows";
 
-const { name } = require("../../package.json");
+const { name } = JSON.parse(fs.readFileSync("../../package.json"));
 
 const workingDirectory = path.resolve("../..");
 
@@ -13,36 +14,30 @@ const svc = new Service({
 	workingDirectory
 });
 
-svc.on("install", () => {
-	svc.start();
-});
+svc
+	.on("install", () => {
+		svc.start();
+	})
+	.on("alreadyinstalled", () => {
+		console.log(`${svc.name} service is already installed`);
+	})
+	.on("invalidinstallation", () => {
+		console.log(`${svc.name} service is invalid installed`);
+	})
+	.on("uninstall", () => {
+		console.log(`${svc.name} service is uninstalled`);
+	})
+	.on("alreadyuninstalled", () => {
+		console.log(`${svc.name} service is already uninstalled`);
+	})
+	.on("start", () => {
+		console.log(`${svc.name} started`);
+	})
+	.on("stop", () => {
+		console.log(`${svc.name} stopped`);
+	})
+	.on("error", error => {
+		console.error(error);
+	});
 
-svc.on("alreadyinstalled", () => {
-	console.log(`${svc.name} service is already installed`);
-});
-
-svc.on("invalidinstallation", () => {
-	console.log(`${svc.name} service is invalid installed`);
-});
-
-svc.on("uninstall", () => {
-	console.log(`${svc.name} service is uninstalled`);
-});
-
-svc.on("alreadyuninstalled", () => {
-	console.log(`${svc.name} service is already uninstalled`);
-});
-
-svc.on("start", () => {
-	console.log(`${svc.name} started`);
-});
-
-svc.on("stop", () => {
-	console.log(`${svc.name} stopped`);
-});
-
-svc.on("error", error => {
-	console.error(error);
-});
-
-module.exports = svc;
+export default svc;

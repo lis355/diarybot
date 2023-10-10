@@ -1,10 +1,11 @@
-require("dotenv-flow").config();
+import { config as dotenv } from "dotenv-flow";
 
-const Application = require("./Application");
+import Application from "./Application.js";
+
+dotenv();
 
 const errorHandler = function (error) {
 	console.error(error.stack);
-	console.error(JSON.stringify(error, null, "\t"));
 };
 
 process.on("uncaughtException", errorHandler);

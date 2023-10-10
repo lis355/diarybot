@@ -1,9 +1,9 @@
-const path = require("path");
+import path from "node:path";
 
-const fs = require("fs-extra");
-const axios = require("axios");
+import fs from "fs-extra";
+import axios from "axios";
 
-module.exports = async function downloadFile({ axiosInstance, url, filePath = undefined }) {
+export default async function downloadFile({ axiosInstance, url, filePath = undefined }) {
 	axiosInstance = axiosInstance || axios;
 
 	const response = await axiosInstance.get(url, {

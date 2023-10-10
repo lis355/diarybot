@@ -1,80 +1,162 @@
-const { EOL } = require("os");
+import { EOL } from "node:os";
+import * as readline from "node:readline/promises";
+import {
+	stdin as input,
+	stdout as output
+} from "node:process";
 
-const { Telegraf } = require("telegraf");
-const _ = require("lodash");
+import { Telegraf } from "telegraf";
+import mediaGroup from "telegraf-media-group";
+import _ from "lodash";
 
-const downloadFile = require("../tools/downloadFile");
+import ApplicationComponent from "../ApplicationComponent.js";
+import downloadFile from "../tools/downloadFile.js";
+import logger from "../tools/logger.js";
 
 const MAX_MESSAGE_LENGTH = 4096;
 const LOG_MESSAGE_LIFETIME_IN_MILLISECONDS = 10000;
 
-module.exports = class TelegramBot {
-	constructor(application) {
-		this.application = application;
-	}
-
+export default class TelegramBot extends ApplicationComponent {
 	async initialize() {
-		this.bot = new Telegraf(process.env.TELEGRAM_TOKEN);
+		await super.initialize();
 
-		this.bot.on("message", async ctx => {
-			console.log(`Сообщение от @${ctx.chat.username} id=${ctx.chat.id}`);
+		if (this.application.isDevelop &&
+			process.env.DEBUG_EMULATE_TG_BY_CONSOLE === "true") {
+			this.initializeDevelop();
+		} else {
+			this.initializeBot();
+		}
 
-			if (ctx.message.text) {
-				await this.processTextMessage(ctx);
-			} else if (ctx.message.photo) {
-				await this.processPhotoMessage(ctx);
-			} else if (ctx.message.voice) {
-				await this.processVoiceMessage(ctx);
+		logger.info("[TelegramBot]: started");
+	}
+
+	initializeDevelop() {
+		readline.createInterface({ input, output })
+			.on("line", async line => {
+				await this.processTextMessage({
+					chat: {
+						id: "MOCK_ID"
+					},
+					message: {
+						text: line
+					},
+					state: {
+						user: this.getUser("mockUser")
+					}
+				});
+			});
+
+		this.bot = {
+			telegram: {
+				sendMessage: async (chatId, message) => {
+					console.log(message);
+
+					return {
+						"message_id": Math.random()
+					};
+				},
+				deleteMessage: async (chatId, messageId) => { }
 			}
-		});
-
-		this.bot.catch((error, ctx) => {
-			console.error(JSON.stringify(error, null, "\t"));
-
-			ctx.reply("Ошибка при добавлении заметки");
-		});
-
-		this.bot.launch();
-
-		console.log("Бот начал работу");
+		};
 	}
 
-	async processTextMessage(ctx) {
-		await this.application.diary.addTextRecord(ctx.message.text);
+	initializeBot() {
+		this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-		await this.sendMessageWithAutodelete(ctx.chat.id, "Текстовая заметка добавлена");
+		this.bot
+			.use((ctx, next) => {
+				ctx.state.user = this.getUser(ctx.from.username);
 
-		console.log("Текстовая заметка добавлена");
+				return next();
+			})
+			.use(mediaGroup())
+			.use((ctx, next) => {
+				if (!ctx.mediaGroup &&
+					ctx.message.photo) {
+					ctx.mediaGroup = [ctx.message];
+				}
+
+				return next();
+			})
+			.on("message", async ctx => {
+				logger.info(`[TelegramBot]: message from @${ctx.state.user.username} id=${ctx.chat.id}`);
+
+				// TODO async queue
+				if (ctx.mediaGroup) {
+					await this.processPhotosMessage(ctx);
+				} else if (ctx.message.voice) {
+					await this.processVoiceMessage(ctx);
+				} else if (ctx.message.text) {
+					await this.processTextMessage(ctx);
+				}
+			})
+			.catch((error, ctx) => {
+				console.error(error);
+			})
+			.launch();
 	}
 
-	async processPhotoMessage(ctx) {
-		const link = await ctx.telegram.getFileLink(_.last(ctx.message.photo)["file_id"]);
-		const url = link.href;
+	getUser(username) {
+		let user = this.application.usersManager.findUser(username);
+		if (!user) {
+			const userConfig = this.application.db.get(`users.${username}`).value();
+			if (userConfig) user = this.application.usersManager.createUser(username, userConfig);
+		}
 
-		console.log(`Скачивание фото ${url}`);
-		const photoBuffer = await downloadFile({ url });
+		if (!user) throw new Error(`Неизвестный пользователь @${username}`);
 
-		await this.application.diary.addPhotoRecord(photoBuffer, ctx.message.caption);
+		return user;
+	}
+
+	async processPhotosMessage(ctx) {
+		const photoBuffers = [];
+
+		for (const mediaItem of ctx.mediaGroup) {
+			const link = await ctx.telegram.getFileLink(_.last(mediaItem.photo)["file_id"]);
+			const url = link.href;
+
+			logger.info(`[TelegramBot]: downloading photo ${url}`);
+
+			const photoBuffer = await downloadFile({ url });
+			photoBuffers.push(photoBuffer);
+		}
+
+		await this.application.diary.addPhotosRecord({ user: ctx.state.user, photoBuffers, text: ctx.message.caption, forwardFrom: this.getForwardFromUsername(ctx.message) });
 
 		await this.sendMessageWithAutodelete(ctx.chat.id, "Фото заметка добавлена");
 
-		console.log("Фото заметка добавлена");
+		logger.info(`[TelegramBot]: photos record added for user ${ctx.state.user.username}`);
 	}
 
 	async processVoiceMessage(ctx) {
 		const link = await ctx.telegram.getFileLink(ctx.message.voice["file_id"]);
 		const url = link.href;
 
-		console.log(`Скачивание аудиосообщения ${url}`);
+		logger.info(`[TelegramBot]: downloading voice message ${url}`);
+
 		const voiceBuffer = await downloadFile({ url });
 
 		const transcription = await this.application.yandexSpeech.audioOggToText(voiceBuffer);
 
-		await this.application.diary.addVoiceRecord(voiceBuffer, transcription);
+		await this.application.diary.addVoiceRecord({ user: ctx.state.user, voiceBuffer, text: transcription, forwardFrom: this.getForwardFromUsername(ctx.message) });
 
 		await this.sendLongMessage(ctx.message.from.id, transcription);
 
-		console.log("Аудиозаметка добавлена");
+		logger.info(`[TelegramBot]: voice record added for user ${ctx.state.user.username}`);
+	}
+
+	async processTextMessage(ctx) {
+		await this.application.diary.addTextRecord({ user: ctx.state.user, text: ctx.message.text, forwardFrom: this.getForwardFromUsername(ctx.message) });
+
+		await this.sendMessageWithAutodelete(ctx.chat.id, "Текстовая заметка добавлена");
+
+		logger.info(`[TelegramBot]: text record added for user ${ctx.state.user.username}`);
+	}
+
+	getForwardFromUsername(message) {
+		const forwardFromInfo = message["forward_from"];
+
+		return forwardFromInfo ? forwardFromInfo.username : null;
 	}
 
 	splitMessageToTelegramBlocks(message) {
@@ -115,13 +197,12 @@ module.exports = class TelegramBot {
 	}
 
 	async sendLongMessage(chatId, message) {
-		for (const messageBlock of this.splitMessageToTelegramBlocks(message)) {
-			await this.bot.telegram.sendMessage(chatId, messageBlock);
-		}
+		for (const messageBlock of this.splitMessageToTelegramBlocks(message)) await this.bot.telegram.sendMessage(chatId, messageBlock);
 	}
 
 	async sendMessageWithAutodelete(chatId, message) {
 		const replyMessageInfo = await this.bot.telegram.sendMessage(chatId, message);
+
 		setTimeout(() => this.bot.telegram.deleteMessage(chatId, replyMessageInfo["message_id"]), LOG_MESSAGE_LIFETIME_IN_MILLISECONDS);
 	}
 };

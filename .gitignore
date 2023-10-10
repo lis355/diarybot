@@ -1,6 +1,10 @@
 yarn.lock
 node_modules/
+
 credentials/
+
 temp/
-.env.*
 daemon/
+
+.env.*
+db.yml
