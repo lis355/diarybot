@@ -6,6 +6,7 @@ import uniqid from "uniqid";
 import urljoin from "url-join";
 
 import ApplicationComponent from "../ApplicationComponent.js";
+import logger from "../tools/logger.js";
 
 export default class YandexSpeech extends ApplicationComponent {
 	async initialize() {
@@ -28,7 +29,7 @@ export default class YandexSpeech extends ApplicationComponent {
 	}
 
 	async audioOggToText(voiceBuffer) {
-		console.log("Загрузка аудио на Yandex Object Storage");
+		logger.info("[YandexSpeech]: загрузка аудио на Yandex Object Storage");
 
 		const uploadResponsePromise = new awsSdkStorage.Upload({
 			client: this.s3Client,
@@ -43,7 +44,7 @@ export default class YandexSpeech extends ApplicationComponent {
 
 		const bucketFileKey = uploadResponse.Key;
 
-		console.log("Отправка запроса на декодирование аудио в Yandex Speech Kit");
+		logger.info("[YandexSpeech]: отправка запроса на декодирование аудио в Yandex Speech Kit");
 
 		const recognizeResponse = await this.request.post("https://transcribe.api.cloud.yandex.net/speech/stt/v2/longRunningRecognize", {
 			config: {
@@ -66,7 +67,7 @@ export default class YandexSpeech extends ApplicationComponent {
 
 		let transcription;
 		while (true) {
-			console.log("Обновление статуса запроса на декодирование аудио в Yandex Speech Kit");
+			logger.info("[YandexSpeech]: обновление статуса запроса на декодирование аудио в Yandex Speech Kit");
 
 			const response = await this.request.get(urljoin("https://operation.api.cloud.yandex.net/operations/", recognizeOperationId));
 
@@ -78,9 +79,9 @@ export default class YandexSpeech extends ApplicationComponent {
 			}
 		}
 
-		console.log("Успешно");
+		logger.info("[YandexSpeech]: успешно");
 
-		console.log(`Удаление временного файла аудио из Yandex Object Storage ${bucketFileKey}`);
+		logger.info(`[YandexSpeech]: удаление временного файла аудио из Yandex Object Storage ${bucketFileKey}`);
 
 		await this.s3Client.send(new awsSdkClient.DeleteObjectCommand({
 			Bucket: process.env.YANDEX_OBJECT_STORAGE_BUCKET,

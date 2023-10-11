@@ -10,6 +10,7 @@ import mediaGroup from "telegraf-media-group";
 import _ from "lodash";
 
 import ApplicationComponent from "../ApplicationComponent.js";
+import AsyncQueue from "../tools/AsyncQueue.js";
 import downloadFile from "../tools/downloadFile.js";
 import logger from "../tools/logger.js";
 
@@ -81,14 +82,15 @@ export default class TelegramBot extends ApplicationComponent {
 			.on("message", async ctx => {
 				logger.info(`[TelegramBot]: message from @${ctx.state.user.username} id=${ctx.chat.id}`);
 
-				// TODO async queue
-				if (ctx.mediaGroup) {
-					await this.processPhotosMessage(ctx);
-				} else if (ctx.message.voice) {
-					await this.processVoiceMessage(ctx);
-				} else if (ctx.message.text) {
-					await this.processTextMessage(ctx);
-				}
+				ctx.state.user.processingQueue.push(async () => {
+					if (ctx.mediaGroup) {
+						await this.processPhotosMessage(ctx);
+					} else if (ctx.message.voice) {
+						await this.processVoiceMessage(ctx);
+					} else if (ctx.message.text) {
+						await this.processTextMessage(ctx);
+					}
+				});
 			})
 			.catch((error, ctx) => {
 				console.error(error);
@@ -101,6 +103,8 @@ export default class TelegramBot extends ApplicationComponent {
 		if (!user) {
 			const userConfig = this.application.db.get(`users.${username}`).value();
 			if (userConfig) user = this.application.usersManager.createUser(username, userConfig);
+
+			user.processingQueue = new AsyncQueue();
 		}
 
 		if (!user) throw new Error(`Неизвестный пользователь @${username}`);
@@ -109,6 +113,8 @@ export default class TelegramBot extends ApplicationComponent {
 	}
 
 	async processPhotosMessage(ctx) {
+		const deleteStartMessage = await this.sendMessage(ctx.chat.id, "Фото заметка добавляется...");
+
 		const photoBuffers = [];
 
 		for (const mediaItem of ctx.mediaGroup) {
@@ -123,12 +129,16 @@ export default class TelegramBot extends ApplicationComponent {
 
 		await this.application.diary.addPhotosRecord({ user: ctx.state.user, photoBuffers, text: ctx.message.caption, forwardFrom: this.getForwardFromUsername(ctx.message) });
 
+		await deleteStartMessage();
+
 		await this.sendMessageWithAutodelete(ctx.chat.id, "Фото заметка добавлена");
 
 		logger.info(`[TelegramBot]: photos record added for user ${ctx.state.user.username}`);
 	}
 
 	async processVoiceMessage(ctx) {
+		const deleteStartMessage = await this.sendMessage(ctx.chat.id, "Аудио заметка добавляется...");
+
 		const link = await ctx.telegram.getFileLink(ctx.message.voice["file_id"]);
 		const url = link.href;
 
@@ -140,13 +150,19 @@ export default class TelegramBot extends ApplicationComponent {
 
 		await this.application.diary.addVoiceRecord({ user: ctx.state.user, voiceBuffer, text: transcription, forwardFrom: this.getForwardFromUsername(ctx.message) });
 
+		await deleteStartMessage();
+
 		await this.sendLongMessage(ctx.message.from.id, transcription);
 
 		logger.info(`[TelegramBot]: voice record added for user ${ctx.state.user.username}`);
 	}
 
 	async processTextMessage(ctx) {
+		const deleteStartMessage = await this.sendMessage(ctx.chat.id, "Текстовая заметка добавляется...");
+
 		await this.application.diary.addTextRecord({ user: ctx.state.user, text: ctx.message.text, forwardFrom: this.getForwardFromUsername(ctx.message) });
+
+		await deleteStartMessage();
 
 		await this.sendMessageWithAutodelete(ctx.chat.id, "Текстовая заметка добавлена");
 
@@ -197,12 +213,20 @@ export default class TelegramBot extends ApplicationComponent {
 	}
 
 	async sendLongMessage(chatId, message) {
-		for (const messageBlock of this.splitMessageToTelegramBlocks(message)) await this.bot.telegram.sendMessage(chatId, messageBlock);
+		for (const messageBlock of this.splitMessageToTelegramBlocks(message)) await this.sendMessage(chatId, messageBlock);
+	}
+
+	async sendMessage(chatId, message) {
+		const replyMessageInfo = await this.bot.telegram.sendMessage(chatId, message);
+
+		const deleteMessage = async () => this.bot.telegram.deleteMessage(chatId, replyMessageInfo["message_id"]);
+
+		return deleteMessage;
 	}
 
 	async sendMessageWithAutodelete(chatId, message) {
-		const replyMessageInfo = await this.bot.telegram.sendMessage(chatId, message);
+		const deleteMessage = await this.sendMessage(chatId, message);
 
-		setTimeout(() => this.bot.telegram.deleteMessage(chatId, replyMessageInfo["message_id"]), LOG_MESSAGE_LIFETIME_IN_MILLISECONDS);
+		setTimeout(deleteMessage, LOG_MESSAGE_LIFETIME_IN_MILLISECONDS);
 	}
 };
