@@ -23,6 +23,17 @@ function getMonthName(month) {
 	}
 }
 
+class DiaryRecord {
+	constructor(time = moment()) {
+		this.time = time;
+		this.contents = [];
+	}
+
+	addText(text) {
+		this.contents.push({ type: "text", text });
+	}
+}
+
 export default class Diary extends ApplicationComponent {
 	getDiaryDirectoryForTime(time) {
 		return path.join(time.year().toString(), `${_.padStart(time.month() + 1, 2, "0")} ${getMonthName(time.month() + 1)}`, _.padStart(time.date(), 2, "0"));
@@ -30,6 +41,28 @@ export default class Diary extends ApplicationComponent {
 
 	getDiaryDirectoryForCurrentTime() {
 		return this.getDiaryDirectoryForTime(moment());
+	}
+
+	parseDiaryNote(strContents) {
+		const records = [];
+
+		const lines = strContents.split(EOL);
+
+		let currentRecord;
+		const content;
+
+		function processLastContent() {
+			if (!currentRecord) return;
+
+
+		}
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			if (/^\d\d:\d\d$/.test()) {
+
+			}
+		}
 	}
 
 	async addTextRecord({ user, text, forwardFrom }) {
