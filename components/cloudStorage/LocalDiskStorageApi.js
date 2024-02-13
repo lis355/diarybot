@@ -1,48 +1,16 @@
 import path from "node:path";
 
-import axios from "axios";
-import { StatusCodes } from "http-status-codes";
-
 import { StorageApi, DirectoryInfo, FileInfo, normalizePath, NONE_OBJECT } from "./StorageApi.js";
-import downloadFile from "../../tools/downloadFile.js";
 import logger from "../../tools/logger.js";
 
 const BASE_DIRECTORY = "/";
 
 export default class YandexDiskApi extends StorageApi {
-	constructor(oauthToken) {
+	constructor(basePath) {
 		super();
 
-		this.oauthToken = oauthToken;
-
-		this.request = axios.create({
-			baseURL: "https://cloud-api.yandex.net/v1/disk/",
-			headers: {
-				"authorization": `OAuth ${this.oauthToken}`
-			}
-		});
-
-		// TODO check and watch for auth
-		// this.request.interceptors.response.use(response => {
-		// 	this.authorized = true;
-
-		// 	return response;
-		// }, error => {
-		// 	if (error.name === "AxiosError" &&
-		// 		error.response) {
-		// 		if (error.response.status === StatusCodes.UNAUTHORIZED) this.authorized = false;
-		// 	}
-
-		// 	return Promise.reject(error);
-		// });
+		this.basePath = basePath;
 	}
-
-	// async checkAuth() {
-	// 	const response = await this.request.get();
-	// 	const data = response.data;
-
-	// 	return Boolean(data.user.login);
-	// }
 
 	async getObjectInfo(path) {
 		path = normalizePath(path);

@@ -5,14 +5,23 @@ export default class UsersManager extends ApplicationComponent {
 	async initialize() {
 		await super.initialize();
 
-		this.users = {};
+		this.users = new Map();
 	}
 
 	findUser(username) {
-		return this.users[username];
+		return this.users.get(username);
 	}
 
-	createUser(username, config) {
-		return (this.users[username] = new User(this, username, config));
+	findOrCreateUser(username) {
+		let user = this.findUser(username);
+		if (!user) {
+			const config = this.application.db.get(`users.${username}`).value();
+			if (!config) throw new Error(`Неизвестный пользователь @${username}`);
+
+			user = new User(this, username, config);
+			this.users.set(username, user);
+		}
+
+		return user;
 	}
 };

@@ -1,3 +1,7 @@
+// DEBUG
+import fs from "node:fs";
+import path from "node:path";
+
 import Diary from "./components/Diary.js";
 import TelegramBot from "./components/TelegramBot.js";
 import UsersManager from "./components/users/UsersManager.js";
@@ -29,6 +33,14 @@ export default class Application {
 		});
 
 		for (const component of this.components) await component.initialize();
+
+		// DEBUG
+		const user = this.usersManager.findOrCreateUser("lis355");
+		const notePath = "D:/YandexDisk/LIFE/Дневник/2024/02 Февраль/12/notes.md";
+		this.diary.parseDiaryNote(
+			this.diary.parseDateFromDiaryDirectory(path.dirname(notePath)),
+			fs.readFileSync(notePath).toString()
+		);
 	}
 
 	get isDevelop() {

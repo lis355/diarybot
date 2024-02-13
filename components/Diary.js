@@ -1,10 +1,11 @@
 import path from "node:path";
-import { EOL } from "node:os";
 
 import _ from "lodash";
 import moment from "moment";
 
 import ApplicationComponent from "../ApplicationComponent.js";
+
+const EOL = "\n";
 
 function getMonthName(month) {
 	switch (month) {
@@ -26,11 +27,11 @@ function getMonthName(month) {
 class DiaryRecord {
 	constructor(time = moment()) {
 		this.time = time;
-		this.contents = [];
+		this.lines = [];
 	}
 
-	addText(text) {
-		this.contents.push({ type: "text", text });
+	addLine(str) {
+		this.lines.push(str);
 	}
 }
 
@@ -43,26 +44,67 @@ export default class Diary extends ApplicationComponent {
 		return this.getDiaryDirectoryForTime(moment());
 	}
 
-	parseDiaryNote(strContents) {
+	parseDateFromDiaryDirectory(directoryPath) {
+		const date = moment(0);
+
+		let name = path.basename(directoryPath);
+		date.set("date", parseInt(name));
+		directoryPath = path.dirname(directoryPath);
+
+		name = path.basename(directoryPath);
+		date.set("month", parseInt(name) - 1);
+		directoryPath = path.dirname(directoryPath);
+
+		name = path.basename(directoryPath);
+		date.set("year", parseInt(name));
+
+		return date;
+	}
+
+	parseDiaryNote(noteDate, strContents) {
 		const records = [];
 
 		const lines = strContents.split(EOL);
 
 		let currentRecord;
-		const content;
 
-		function processLastContent() {
-			if (!currentRecord) return;
-
-
+		function processLastRecord() {
+			records.push(currentRecord);
 		}
 
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
-			if (/^\d\d:\d\d$/.test()) {
 
+			const timeMatch = line.match(/^(\d\d):(\d\d)$/);
+			if (timeMatch) {
+				const hours = parseInt(timeMatch[1]);
+				const minutes = parseInt(timeMatch[2]);
+				if (hours >= 0 &&
+					hours <= 24 &&
+					minutes >= 0 &&
+					minutes <= 59) {
+					if (currentRecord) processLastRecord();
+
+					const recordDate = moment(noteDate).add(hours, "hours").add(minutes, "minutes");
+					currentRecord = new DiaryRecord(recordDate);
+				} else {
+					// Bad format
+				}
+			} else if (line === EOL &&
+				currentRecord &&
+				currentRecord.lines.length > 0 &&
+				currentRecord.lines[currentRecord.lines - 1] !== EOL) {
+				currentRecord.lines.push(EOL);
+			} else if (currentRecord) {
+				currentRecord.lines.push(line);
+			} else {
+				// Bad format
 			}
 		}
+
+		if (currentRecord) processLastRecord();
+
+		console.log(records);
 	}
 
 	async addTextRecord({ user, text, forwardFrom }) {

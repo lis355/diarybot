@@ -7,6 +7,9 @@ export default class User {
 		this.username = username;
 		this.config = config;
 
-		this.cloudStorageApi = new YandexDiskApi(this.config.yandexDiskOauthToken);
+		switch (this.config.storage.type) {
+			case "local": this.storageApi = new YandexDiskApi(this.config.yandexDiskOauthToken);
+			// case "local": this.storageApi = new YandexDiskApi(this.config.yandexDiskOauthToken);
+		}
 	}
 };

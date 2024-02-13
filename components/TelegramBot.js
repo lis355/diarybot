@@ -17,6 +17,23 @@ import logger from "../tools/logger.js";
 const MAX_MESSAGE_LENGTH = 4096;
 const LOG_MESSAGE_LIFETIME_IN_MILLISECONDS = 10000;
 
+function commandMiddleware(ctx, next) {
+	const command = ctx.state.command = {
+		isValid: false
+	};
+
+	const text = _.get(ctx, "message.text");
+	if (typeof text === "string") {
+		command.isValid = true;
+
+		const parts = text.split(" ");
+		command.name = parts[0].substring(1);
+		command.arguments = parts.slice(1);
+	}
+
+	return next();
+};
+
 export default class TelegramBot extends ApplicationComponent {
 	async initialize() {
 		await super.initialize();
@@ -79,6 +96,15 @@ export default class TelegramBot extends ApplicationComponent {
 
 				return next();
 			})
+			.use(commandMiddleware)
+			.command("mrg",
+				commandMiddleware,
+				async ctx => {
+					ctx.state.user.processingQueue.push(async () => {
+						await this.commandMergeTwoLastRecord(ctx);
+					});
+				}
+			)
 			.on("message", async ctx => {
 				logger.info(`[TelegramBot]: message from @${ctx.state.user.username} id=${ctx.chat.id}`);
 
@@ -99,17 +125,23 @@ export default class TelegramBot extends ApplicationComponent {
 	}
 
 	getUser(username) {
-		let user = this.application.usersManager.findUser(username);
-		if (!user) {
-			const userConfig = this.application.db.get(`users.${username}`).value();
-			if (userConfig) user = this.application.usersManager.createUser(username, userConfig);
+		const user = this.application.usersManager.findOrCreateUser(username);
 
-			user.processingQueue = new AsyncQueue();
-		}
-
-		if (!user) throw new Error(`Неизвестный пользователь @${username}`);
+		if (!user.processingQueue) user.processingQueue = new AsyncQueue();
 
 		return user;
+	}
+
+	async commandMergeTwoLastRecord(ctx) {
+		const deleteStartMessage = await this.sendMessage(ctx.chat.id, "Команда выполняется...");
+
+		await this.application.diary.mergeTwoLastRecord({ user: ctx.state.user });
+
+		await deleteStartMessage();
+
+		await this.sendMessageWithAutodelete(ctx.chat.id, "Готово");
+
+		logger.info(`[TelegramBot]: commandMergeTwoLastRecord done for user ${ctx.state.user.username}`);
 	}
 
 	async processPhotosMessage(ctx) {
