@@ -8,3 +8,5 @@ daemon/
 
 .env.*
 db.yml
+
+onRun.js

@@ -1,19 +1,19 @@
-import { EOL } from "node:os";
-import * as readline from "node:readline/promises";
 import {
 	stdin as input,
 	stdout as output
 } from "node:process";
+import * as readline from "node:readline/promises";
 
+import _ from "lodash";
 import { Telegraf } from "telegraf";
 import mediaGroup from "telegraf-media-group";
-import _ from "lodash";
 
 import ApplicationComponent from "../ApplicationComponent.js";
 import AsyncQueue from "../tools/AsyncQueue.js";
 import downloadFile from "../tools/downloadFile.js";
 import logger from "../tools/logger.js";
 
+const EOL = "\n";
 const MAX_MESSAGE_LENGTH = 4096;
 const LOG_MESSAGE_LIFETIME_IN_MILLISECONDS = 10000;
 
@@ -105,6 +105,16 @@ export default class TelegramBot extends ApplicationComponent {
 					});
 				}
 			)
+			.command("help",
+				commandMiddleware,
+				async ctx => {
+					await this.deleteCurrentMessage(ctx);
+
+					await this.sendMessage(ctx.chat.id, `
+					/mrg - обьединить две крайние записи
+					`);
+				}
+			)
 			.on("message", async ctx => {
 				logger.info(`[TelegramBot]: message from @${ctx.state.user.username} id=${ctx.chat.id}`);
 
@@ -133,9 +143,11 @@ export default class TelegramBot extends ApplicationComponent {
 	}
 
 	async commandMergeTwoLastRecord(ctx) {
+		await this.deleteCurrentMessage(ctx);
+
 		const deleteStartMessage = await this.sendMessage(ctx.chat.id, "Команда выполняется...");
 
-		await this.application.diary.mergeTwoLastRecord({ user: ctx.state.user });
+		await ctx.state.user.diary.mergeTwoLastRecord();
 
 		await deleteStartMessage();
 
@@ -159,7 +171,7 @@ export default class TelegramBot extends ApplicationComponent {
 			photoBuffers.push(photoBuffer);
 		}
 
-		await this.application.diary.addPhotosRecord({ user: ctx.state.user, photoBuffers, text: ctx.message.caption, forwardFrom: this.getForwardFromUsername(ctx.message) });
+		await ctx.state.user.diary.addPhotosRecord({ photoBuffers, text: ctx.message.caption, forwardFrom: this.getForwardFromUsername(ctx.message) });
 
 		await deleteStartMessage();
 
@@ -180,7 +192,7 @@ export default class TelegramBot extends ApplicationComponent {
 
 		const transcription = await this.application.yandexSpeech.audioOggToText(voiceBuffer);
 
-		await this.application.diary.addVoiceRecord({ user: ctx.state.user, voiceBuffer, text: transcription, forwardFrom: this.getForwardFromUsername(ctx.message) });
+		await ctx.state.user.diary.addVoiceRecord({ voiceBuffer, text: transcription, forwardFrom: this.getForwardFromUsername(ctx.message) });
 
 		await deleteStartMessage();
 
@@ -192,7 +204,7 @@ export default class TelegramBot extends ApplicationComponent {
 	async processTextMessage(ctx) {
 		const deleteStartMessage = await this.sendMessage(ctx.chat.id, "Текстовая заметка добавляется...");
 
-		await this.application.diary.addTextRecord({ user: ctx.state.user, text: ctx.message.text, forwardFrom: this.getForwardFromUsername(ctx.message) });
+		await ctx.state.user.diary.addTextRecord({ text: ctx.message.text, forwardFrom: this.getForwardFromUsername(ctx.message) });
 
 		await deleteStartMessage();
 
@@ -251,7 +263,7 @@ export default class TelegramBot extends ApplicationComponent {
 	async sendMessage(chatId, message) {
 		const replyMessageInfo = await this.bot.telegram.sendMessage(chatId, message);
 
-		const deleteMessage = async () => this.bot.telegram.deleteMessage(chatId, replyMessageInfo["message_id"]);
+		const deleteMessage = async () => this.deleteMessage(chatId, replyMessageInfo["message_id"]);
 
 		return deleteMessage;
 	}
@@ -260,5 +272,13 @@ export default class TelegramBot extends ApplicationComponent {
 		const deleteMessage = await this.sendMessage(chatId, message);
 
 		setTimeout(deleteMessage, LOG_MESSAGE_LIFETIME_IN_MILLISECONDS);
+	}
+
+	async deleteMessage(chatId, messageId) {
+		await this.bot.telegram.deleteMessage(chatId, messageId);
+	}
+
+	async deleteCurrentMessage(ctx) {
+		await this.bot.telegram.deleteMessage(ctx.chat.id, ctx.message["message_id"]);
 	}
 };

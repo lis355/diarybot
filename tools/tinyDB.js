@@ -32,7 +32,8 @@ export class YAMLFileAdapter extends Adapter {
 		let data = {};
 		try {
 			data = YAML.parse(fs.readFileSync(this.filePath).toString());
-		} catch (_) {
+		} catch (error) {
+			console.error(error);
 		}
 
 		return data;

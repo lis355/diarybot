@@ -1,4 +1,6 @@
-import YandexDiskApi from "../cloudStorage/YandexDiskApi.js";
+import Diary from "../../logic/diary/Diary.js";
+import LocalDiskStorage from "../../logic/storage/LocalDiskStorage.js";
+import YandexDiskApi from "../../logic/storage/YandexDiskApi.js";
 
 export default class User {
 	constructor(usersManager, username, config) {
@@ -8,8 +10,10 @@ export default class User {
 		this.config = config;
 
 		switch (this.config.storage.type) {
-			case "local": this.storageApi = new YandexDiskApi(this.config.yandexDiskOauthToken);
-			// case "local": this.storageApi = new YandexDiskApi(this.config.yandexDiskOauthToken);
+			case "local": this.storage = new LocalDiskStorage(this.config.storage); break;
+			case "yandexdisk": this.storage = new YandexDiskApi(this.config.storage); break;
 		}
+
+		this.diary = new Diary(this);
 	}
 };
