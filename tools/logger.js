@@ -1,19 +1,15 @@
-import pino from "pino";
+function log(level, objects) {
+	if (!Array.isArray(objects)) objects = [objects];
 
-export default pino(
-	pino.transport({
-		targets: [
-			{
-				target: "pino-pretty",
-				level: "trace",
-				options: {
-					colorize: true,
-					ignore: "pid,hostname"
-				}
-			}
-		]
-	}),
-	pino.destination({
-		sync: true
-	})
-);
+	objects = objects.map(String).join(" ");
+
+	(level === "ERROR" ? console.error : console.log)(`[${new Date().toISOString()}] ${level} ${objects}`);
+}
+
+const loggers = {};
+
+["INFO", "WARNING", "ERROR"].forEach(level => {
+	loggers[level.toLowerCase()] = objects => log(level, objects);
+})
+
+export default loggers;
