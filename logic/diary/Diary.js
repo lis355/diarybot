@@ -236,23 +236,21 @@ export default class Diary {
 	async addPhotosRecord({ photoBuffers, text: caption = "", forwardFrom }) {
 		const date = moment();
 		const noteDate = this.getDiaryNoteDateForDate(date);
-		const diaryDirectoryPath = this.getDiaryDirectoryPathForDate(noteDate);
+		const noteDirectoryPath = this.getDiaryNoteDirectoryPathForDate(noteDate);
 
 		let text = "";
 
 		for (let i = 0; i < photoBuffers.length; i++) {
 			const photoBuffer = photoBuffers[i];
 
-			let fileName = date.format("HH mm ss");
-			if (photoBuffers.length > 1) fileName += ` [${i}]`;
-			fileName += ".jpg";
+			const fileName = [date.format("HH mm ss"), photoBuffers.length > 1 && ` [${i}]`, ".jpg"].filter(Boolean).join("");
+			const fileDirectory = Path.join(noteDirectoryPath, "photos");
+			const filePath = Path.join(fileDirectory, fileName);
 
-			const filePath = Path.join(diaryDirectoryPath, "photo", fileName);
-
-			await this.user.storage.ensureDirectory(filePath.parentPath);
+			await this.user.storage.ensureDirectory(fileDirectory);
 			await this.user.storage.createOrUpdateFile(filePath, photoBuffer);
 
-			text += `![[photo/${fileName}|200]]`;
+			text += `![[photos/${fileName}|200]]`;
 		}
 
 		if (caption) text += caption;
@@ -263,12 +261,13 @@ export default class Diary {
 	async addVoiceRecord({ voiceBuffer, text, forwardFrom }) {
 		const date = moment();
 		const noteDate = this.getDiaryNoteDateForDate(date);
-		const diaryDirectoryPath = this.getDiaryDirectoryPathForDate(noteDate);
+		const noteDirectoryPath = this.getDiaryNoteDirectoryPathForDate(noteDate);
 
 		const fileName = `${date.format("HH mm ss")}.oga`;
-		const filePath = Path.join(diaryDirectoryPath, "voice", fileName);
+		const fileDirectory = Path.join(noteDirectoryPath, "voice");
+		const filePath = Path.join(fileDirectory, fileName);
 
-		await this.user.storage.ensureDirectory(filePath.parentPath);
+		await this.user.storage.ensureDirectory(fileDirectory);
 		await this.user.storage.createOrUpdateFile(filePath, voiceBuffer);
 
 		text = `![[voice/${fileName}]]${EOL}${text}`;
