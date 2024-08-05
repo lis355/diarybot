@@ -1,7 +1,7 @@
 import path from "node:path";
 
-import fs from "fs-extra";
 import { Service } from "node-windows";
+import fs from "fs-extra";
 
 const { name } = JSON.parse(fs.readFileSync("../../package.json"));
 

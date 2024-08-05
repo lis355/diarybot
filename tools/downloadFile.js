@@ -1,7 +1,7 @@
 import path from "node:path";
 
-import fs from "fs-extra";
 import axios from "axios";
+import fs from "fs-extra";
 
 export default async function downloadFile({ axiosInstance, url, filePath = undefined }) {
 	axiosInstance = axiosInstance || axios;

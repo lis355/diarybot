@@ -1,7 +1,6 @@
-import fs from "node:fs";
-
 import { Storage, DirectoryInfo, FileInfo, NONE_OBJECT } from "./Storage.js";
 import { Path } from "../../tools/Path.js";
+import fs from "fs-extra";
 
 export default class LocalDiskStorage extends Storage {
 	constructor(config) {
