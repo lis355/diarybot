@@ -17,22 +17,24 @@ const EOL = "\n";
 const MAX_MESSAGE_LENGTH = 4096;
 const LOG_MESSAGE_LIFETIME_IN_MILLISECONDS = 10000;
 
-function commandMiddleware(ctx, next) {
-	const command = ctx.state.command = {
-		isValid: false
-	};
+function commandMiddleware() {
+	return (ctx, next) => {
+		const command = ctx.state.command = {
+			isValid: false
+		};
 
-	const text = _.get(ctx, "message.text");
-	if (typeof text === "string") {
-		command.isValid = true;
+		const text = _.get(ctx, "message.text");
+		if (typeof text === "string") {
+			command.isValid = true;
 
-		const parts = text.split(" ");
-		command.name = parts[0].substring(1);
-		command.arguments = parts.slice(1);
+			const parts = text.split(" ");
+			command.name = parts[0].substring(1);
+			command.arguments = parts.slice(1);
+		}
+
+		return next();
 	}
-
-	return next();
-};
+}
 
 export default class TelegramBot extends ApplicationComponent {
 	async initialize() {
@@ -74,19 +76,30 @@ export default class TelegramBot extends ApplicationComponent {
 					};
 				},
 				deleteMessage: async (chatId, messageId) => { }
-			}
+			},
+			stop: () => { }
 		};
 	}
 
 	initializeBot() {
 		this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-		this.bot
-			.use((ctx, next) => {
+		const userMiddleware = () => {
+			return (ctx, next) => {
 				ctx.state.user = this.getUser(ctx.from.username);
 
 				return next();
-			})
+			}
+		}
+
+		const checkUserRoleMiddleware = role => {
+			return (ctx, next) => {
+				if (ctx.state.user.config.roles.includes(role)) return next();
+			}
+		}
+
+		this.bot
+			.use(userMiddleware())
 			.use(mediaGroup())
 			.use((ctx, next) => {
 				if (!ctx.mediaGroup &&
@@ -96,9 +109,8 @@ export default class TelegramBot extends ApplicationComponent {
 
 				return next();
 			})
-			.use(commandMiddleware)
+			.use(commandMiddleware())
 			.command("mrg",
-				commandMiddleware,
 				async ctx => {
 					ctx.state.user.processingQueue.push(async () => {
 						await this.commandMergeTwoLastRecord(ctx);
@@ -106,13 +118,20 @@ export default class TelegramBot extends ApplicationComponent {
 				}
 			)
 			.command("help",
-				commandMiddleware,
 				async ctx => {
 					await this.deleteCurrentMessage(ctx);
 
 					await this.sendMessage(ctx.chat.id, `
 					/mrg - обьединить две крайние записи
 					`);
+				}
+			)
+			.command("stop",
+				checkUserRoleMiddleware("admin"),
+				async ctx => {
+					ctx.state.user.processingQueue.push(async () => {
+						await this.application.exit(1);
+					});
 				}
 			)
 			.on("message", async ctx => {
@@ -131,7 +150,7 @@ export default class TelegramBot extends ApplicationComponent {
 			.catch((error, ctx) => {
 				console.error(error);
 			})
-			.launch();
+			.launch({ dropPendingUpdates: !this.application.isDevelop });
 	}
 
 	getUser(username) {
@@ -140,6 +159,12 @@ export default class TelegramBot extends ApplicationComponent {
 		if (!user.processingQueue) user.processingQueue = new AsyncQueue();
 
 		return user;
+	}
+
+	async exit() {
+		await super.exit();
+
+		this.bot.stop();
 	}
 
 	async commandMergeTwoLastRecord(ctx) {

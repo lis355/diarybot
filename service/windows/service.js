@@ -3,9 +3,8 @@ import path from "node:path";
 import { Service } from "node-windows";
 import fs from "fs-extra";
 
-const { name } = JSON.parse(fs.readFileSync("../../package.json"));
-
-const workingDirectory = path.resolve("../..");
+const workingDirectory = path.resolve(process.cwd());
+const { name } = JSON.parse(fs.readFileSync(path.join(workingDirectory, "package.json")));
 
 const svc = new Service({
 	name,

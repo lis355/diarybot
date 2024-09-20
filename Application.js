@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { createDB, YAMLFileAdapter } from "./tools/tinyDB.js";
 import fs from "fs-extra";
+import service from "./service/windows/service.js"
 import TelegramBot from "./components/TelegramBot.js";
 import UsersManager from "./components/users/UsersManager.js";
 import YandexSpeech from "./components/YandexSpeech.js";
@@ -21,6 +22,14 @@ export default class Application {
 		this.components.push(component);
 	}
 
+	get isDevelop() {
+		return process.env.DEVELOP === "true";
+	}
+
+	get userDataPath() {
+		return path.resolve(process.cwd(), process.env.USER_DATA_PATH);
+	}
+
 	async initialize() {
 		this.db = await createDB({
 			adapter: new YAMLFileAdapter(DB_FILE_PATH),
@@ -35,11 +44,15 @@ export default class Application {
 			fs.existsSync("./onRun.js")) await (await import("./onRun.js")).default(this);
 	}
 
-	get isDevelop() {
-		return process.env.DEVELOP === "true";
-	}
+	async exit(code = 0) {
+		if (!this.isDevelop) {
+			await new Promise(resolve => {
+				service.once("uninstall", resolve);
 
-	get userDataPath() {
-		return path.resolve(process.cwd(), process.env.USER_DATA_PATH);
+				service.uninstall();
+			})
+		}
+
+		process.exit(code);
 	}
 };

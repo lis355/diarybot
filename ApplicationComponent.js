@@ -4,4 +4,6 @@ export default class ApplicationComponent {
 	}
 
 	async initialize() { }
+
+	async exit() { }
 };

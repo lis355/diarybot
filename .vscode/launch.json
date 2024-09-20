@@ -27,7 +27,7 @@
 				"<node_internals>/**"
 			],
 			"program": "${workspaceFolder}/service/windows/serviceInstall.js",
-			"cwd": "${workspaceFolder}/service/windows/",
+			"cwd": "${workspaceFolder}",
 			"console": "integratedTerminal",
 			"outputCapture": "std"
 		},
@@ -39,7 +39,7 @@
 				"<node_internals>/**"
 			],
 			"program": "${workspaceFolder}/service/windows/serviceUninstall.js",
-			"cwd": "${workspaceFolder}/service/windows/",
+			"cwd": "${workspaceFolder}",
 			"console": "integratedTerminal",
 			"outputCapture": "std"
 		}
