@@ -2,7 +2,6 @@ import path from "node:path";
 
 import { createDB, YAMLFileAdapter } from "./tools/tinyDB.js";
 import fs from "fs-extra";
-import service from "./service/windows/service.js"
 import TelegramBot from "./components/TelegramBot.js";
 import UsersManager from "./components/users/UsersManager.js";
 import YandexSpeech from "./components/YandexSpeech.js";
@@ -45,14 +44,6 @@ export default class Application {
 	}
 
 	async exit(code = 0) {
-		if (!this.isDevelop) {
-			await new Promise(resolve => {
-				service.once("uninstall", resolve);
-
-				service.uninstall();
-			})
-		}
-
 		process.exit(code);
 	}
 };

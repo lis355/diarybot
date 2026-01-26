@@ -33,7 +33,7 @@ function commandMiddleware() {
 		}
 
 		return next();
-	}
+	};
 }
 
 export default class TelegramBot extends ApplicationComponent {
@@ -89,14 +89,14 @@ export default class TelegramBot extends ApplicationComponent {
 				ctx.state.user = this.getUser(ctx.from.username);
 
 				return next();
-			}
-		}
+			};
+		};
 
 		const checkUserRoleMiddleware = role => {
 			return (ctx, next) => {
 				if (ctx.state.user.config.roles.includes(role)) return next();
-			}
-		}
+			};
+		};
 
 		this.bot
 			.use(userMiddleware())
@@ -130,7 +130,7 @@ export default class TelegramBot extends ApplicationComponent {
 				checkUserRoleMiddleware("admin"),
 				async ctx => {
 					ctx.state.user.processingQueue.push(async () => {
-						await this.application.exit(1);
+						this.bot.stop();
 					});
 				}
 			)
