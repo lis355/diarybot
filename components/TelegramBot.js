@@ -215,7 +215,7 @@ export default class TelegramBot extends ApplicationComponent {
 
 		const voiceBuffer = await downloadFile({ url });
 
-		const transcription = await this.application.yandexSpeech.audioOggToText(voiceBuffer);
+		const transcription = await this.application.aiManager.audioOggToText(voiceBuffer);
 
 		await ctx.state.user.diary.addVoiceRecord({ voiceBuffer, text: transcription, forwardFrom: this.getForwardFromUsername(ctx.message) });
 

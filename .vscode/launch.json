@@ -18,30 +18,6 @@
 			},
 			"console": "integratedTerminal",
 			"outputCapture": "std"
-		},
-		{
-			"name": "service-windows-install",
-			"type": "node",
-			"request": "launch",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"program": "${workspaceFolder}/service/windows/serviceInstall.js",
-			"cwd": "${workspaceFolder}",
-			"console": "integratedTerminal",
-			"outputCapture": "std"
-		},
-		{
-			"name": "service-windows-uninstall",
-			"type": "node",
-			"request": "launch",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"program": "${workspaceFolder}/service/windows/serviceUninstall.js",
-			"cwd": "${workspaceFolder}",
-			"console": "integratedTerminal",
-			"outputCapture": "std"
 		}
 	]
 }

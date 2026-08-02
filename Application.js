@@ -1,10 +1,11 @@
 import path from "node:path";
 
-import { createDB, YAMLFileAdapter } from "./tools/tinyDB.js";
 import fs from "fs-extra";
+
+import { createDB, YAMLFileAdapter } from "./tools/tinyDB.js";
+import AIManager from "./components/AIManager.js";
 import TelegramBot from "./components/TelegramBot.js";
 import UsersManager from "./components/users/UsersManager.js";
-import YandexSpeech from "./components/YandexSpeech.js";
 
 const DB_FILE_PATH = "db.yml";
 
@@ -13,7 +14,7 @@ export default class Application {
 		this.components = [];
 
 		this.addComponent(this.usersManager = new UsersManager(this));
-		this.addComponent(this.yandexSpeech = new YandexSpeech(this));
+		this.addComponent(this.aiManager = new AIManager(this));
 		this.addComponent(this.telegramBot = new TelegramBot(this));
 	}
 
